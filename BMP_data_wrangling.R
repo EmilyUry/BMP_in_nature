@@ -9,13 +9,86 @@
 #' Last update: November 4, 2021
 
 
-setwd("C:/Users/uryem/OneDrive - University of Waterloo/BMP_project")
+# setwd("C:/Users/uryem/OneDrive - University of Waterloo/BMP_project") ## laptop
+setwd("C:/Users/Emily Ury/OneDrive - University of Waterloo/BMP_project")
 
 library(dplyr)
 library(tidyr)
 
-flow <- read.csv("Flow.csv", header = T)
-wq <- read.csv("WaterQuality.csv", header = T)
+
+### READ IN AND ORGANIZE ALL OF THE DATA
+
+flow <- read.csv("Flow.csv", header = T) %>%
+  select('SiteID', 'MSID','EventID', 'DateStart', 'DateEnd',
+   'TimeStart', 'TimeEnd', 'Volume_Total', 'Volume_Units',
+   'PeakFlow_Rate','PeakFlow_Units')
+
+ms <- read.csv("MonitoringStation.csv", header = TRUE) %>%
+  select(c('SiteID', 'BMPID','MSType','MSID'))
+
+flow.ms <- flow %>%
+  left_join(ms, by = c("MSID", "SiteID")) #; rm(flow, wq)
+
+wq <- read.csv("WaterQuality.csv", header = T) %>%
+  select('SiteID','MSID','EventID','DateSample','TimeSample',
+         'Analyte','Value_SubHalfDL', 'WQQualifier',
+         'SampleType','SampleFraction')
+
+flow.ms.wq <- flow.ms %>%
+  left_join(wq, by = c("MSID", "EventID", "SiteID")) #; rm(flow, wq)
+
+bmp <- read.csv("BMPInfo.csv", header = TRUE) %>%
+  select(c('BMPID','SiteID','BMPType')) %>%
+  mutate(BMPType = as.factor(BMPType))
+
+all <- flow.ms.wq %>%
+  left_join(bmp, by = c("SiteID", "BMPID")) #; rm(ms, bmp)
+
+
+
+
+
+###### FILTER DATA
+
+## filter out events with no flow
+filter1 <- all[which(all$Volume_Total > -1), ] #; rm(all)
+
+summary(filter1$EventID)
+
+## filter so we only have flow weighted means
+filter2 <- filter1[which(filter1$SampleType == "EMC-Flow Weighted"),] #; rm(filter1)
+
+## filter MS type to just inflow and outflow
+inflow <- filter2[which(filter2$MSType == "Inflow"),]
+outflow <- filter2[which(filter2$MSType == "Outflow"),] %>%
+  select('SiteID', 'EventID', 'Value_SubHalfDL', 'Volume_Total')
+names(outflow) <- c('SiteID', 'EventID', 'outflow.Value_SubHalfDL', 'outflow.Volume_Total')
+
+merge <- inflow %>%
+  left_join(outflow, by =c('SiteID', 'EventID') )
+
+
+test <- na.omit(merge, cols = c('Value_SubHalfDL', 'Volume_Total', 'outflow.Value_SubHalfDL', 'outflow.Volume_Total'))
+
+
+
+test <- wider.df[which(wider.df$Analyte == "Nitrogen"),]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## exploring analytes
+
 unique(wq$Analyte)
 
 #### filter for only P analytes
