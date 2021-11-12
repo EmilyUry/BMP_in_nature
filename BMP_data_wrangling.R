@@ -18,31 +18,70 @@ library(tidyr)
 
 ### READ IN AND ORGANIZE ALL OF THE DATA
 
+ms <- read.csv("MonitoringStation.csv", header = TRUE)  %>%
+  select(c( 'SiteID','MSID', 'BMPID','MSType'))  %>%
+  filter(MSType == "Inflow" | MSType == "Outflow")
+
+bmp <- read.csv("BMPInfo.csv", header = TRUE)  %>%
+  select(c('BMPID','SiteID','BMPType')) %>%
+  mutate(BMPType = as.factor(BMPType))
+
+
+ms.bmp <- ms %>%
+  left_join(bmp, by = c("SiteID","BMPID") ) # ; rm(ms, bmp)
+
+
 flow <- read.csv("Flow.csv", header = T) %>%
   select('SiteID', 'MSID','EventID', 'DateStart', 'DateEnd',
    'TimeStart', 'TimeEnd', 'Volume_Total', 'Volume_Units',
    'PeakFlow_Rate','PeakFlow_Units')
 
-ms <- read.csv("MonitoringStation.csv", header = TRUE) %>%
-  select(c('SiteID', 'BMPID','MSType','MSID'))
+nrow(distinct(test, SiteID, EventID, BMPID )) ## 19752
+nrow(distinct(test, SiteID, EventID, BMPID, Volume_Units )) ## 19752
+  
+nrow(distinct(flow, SiteID))
+
+
+test <- merge(ms.bmp, flow, by = c("SiteID", "MSID"), all.y = TRUE) %>%
+  filter(Volume_Total > -999)
+
+
+test3 <- aggregate(test$Volume_Total, by = test[c("SiteID", "BMPID", "EventID", "MSType")], sum) %>%
+  pivot_wider(names_from = MSType, values_from = x)
+
+
+test2 <- aggregate(test$Volume_Total, by = test[c("SiteID", "BMPID", "EventID", "MSType",         #"DateStart", "DateEnd", "TimeStart", "TimeEnd",
+                                                  "BMPType", "DateStart", "Volume_Units")], sum) %>%
+        pivot_wider(names_from = MSType, values_from = x)
+  
+  
+table(bmp$BMPType)
+
+
+uniq <- unique(bmp$BMPID)
+length(uniq)
+
 
 flow.ms <- flow %>%
-  left_join(ms, by = c("MSID", "SiteID")) #; rm(flow, wq)
+  left_join(ms, by = c("MSID")) #; rm(flow, ms)
 
-wq <- read.csv("WaterQuality.csv", header = T) %>%
+wq <- read.csv("WaterQuality.csv", header = T)  %>%
   select('SiteID','MSID','EventID','DateSample','TimeSample',
          'Analyte','Value_SubHalfDL', 'WQQualifier',
          'SampleType','SampleFraction')
 
 flow.ms.wq <- flow.ms %>%
-  left_join(wq, by = c("MSID", "EventID", "SiteID")) #; rm(flow, wq)
+  left_join(wq, by = c("MSID", "EventID"))
+
+flow.ms.wq <- flow.ms %>%
+  left_join(wq, by = c("MSID", "EventID", "SiteID")) #; rm(flow.ms, wq)
 
 bmp <- read.csv("BMPInfo.csv", header = TRUE) %>%
   select(c('BMPID','SiteID','BMPType')) %>%
   mutate(BMPType = as.factor(BMPType))
 
 all <- flow.ms.wq %>%
-  left_join(bmp, by = c("SiteID", "BMPID")) #; rm(ms, bmp)
+  left_join(bmp, by = c("SiteID", "BMPID")) ; rm(flow.ms.wq, bmp)
 
 
 
