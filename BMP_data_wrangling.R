@@ -34,7 +34,69 @@ ms.bmp <- ms %>%
 flow <- read.csv("Flow.csv", header = T) %>%
   select('SiteID', 'MSID','EventID', 'DateStart', 'DateEnd',
    'TimeStart', 'TimeEnd', 'Volume_Total', 'Volume_Units',
-   'PeakFlow_Rate','PeakFlow_Units')
+   'PeakFlow_Rate','PeakFlow_Units') %>%
+  filter(Volume_Total > 0)
+
+
+table(flow$Volume_Units)   ## need to convert volumes to L
+
+
+newd <- ms.bmp %>%
+  left_join(flow, by = c("SiteID", "MSID"))
+
+
+long.wq <- read.csv("WaterQuality.csv", header = T) #%>%
+  select('SiteID','MSID','EventID','DateSample','TimeSample',
+         'Analyte','Value_SubHalfDL', 'WQQualifier',
+         'SampleType','SampleFraction') %>%
+  filter(SampleType == 'EMC-Flow Weighted')
+
+
+
+
+wq <- read.csv("WaterQuality.csv", header = T)  %>%
+  select('SiteID','MSID','EventID','DateSample','TimeSample',
+         'Analyte','Value_SubHalfDL', 'WQQualifier',
+         'SampleType','SampleFraction') %>%
+  filter(SampleType == 'EMC-Flow Weighted') %>%
+  pivot_wider(names_from = 'Analyte', values_from = 'Value_SubHalfDL' )  ##note collapse sampleTypes
+
+
+
+Phos <- read.csv("WaterQuality.csv", header = T)  %>%
+  select('SiteID','MSID','EventID','DateSample','TimeSample',
+         'Analyte','Value_SubHalfDL', 'SampleFraction', 'Value_Unit',         ## might want to double check WQQualifer and SampleFraction
+         'SampleType') %>%
+  filter(SampleType == 'EMC-Flow Weighted') %>%
+  filter(Analyte %in% c("Phosphorus as P", "Phosphorus, orthophosphate as P", "Orthophosphate", 
+                        "Phosphorus", "Phosphorus, orthophosphate as PO4", "Phosphorus, Particulate Organic", 
+                        "Phosphorus, organic as P")) %>%
+  mutate(Analyte_SampleType = paste(Analyte, SampleFraction)) %>%
+  select(-c("SampleFraction", "Analyte")) %>%
+  pivot_wider(names_from = 'Analyte_SampleType', values_from = 'Value_SubHalfDL' )  ##note collapse sampleTypes
+
+
+
+
+all <- newd %>%
+  left_join(wq, by = c("SiteID", "MSID", "EventID"))
+
+
+
+
+
+
+
+
+  
+test <- aggregate(newd$Volume_Total, by = newd[c("SiteID", "EventID", "MSType", "BMPType", "DateStart", "Volume_Units")], sum)
+
+
+
+
+
+
+
 
 nrow(distinct(test, SiteID, EventID, BMPID )) ## 19752
 nrow(distinct(test, SiteID, EventID, BMPID, Volume_Units )) ## 19752
