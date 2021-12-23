@@ -18,6 +18,11 @@ library(tidyr)
 
 ### READ IN AND ORGANIZE ALL OF THE DATA
 
+
+
+## first read in the files that identify and classify each monitoring station 
+## as either 'inflow' or 'outflow' and the type of BMP
+
 ms <- read.csv("MonitoringStation.csv", header = TRUE)  %>%
   select(c( 'SiteID','MSID', 'BMPID','MSType'))  %>%
   filter(MSType == "Inflow" | MSType == "Outflow")
@@ -27,10 +32,13 @@ bmp <- read.csv("BMPInfo.csv", header = TRUE)  %>%
   mutate(BMPType = as.factor(BMPType))
 
 
+# Join monitoring station info with bmp info
 ms.bmp <- ms %>%
   left_join(bmp, by = c("SiteID","BMPID") ) # ; rm(ms, bmp)
 
 
+
+# Read in flow data
 flow <- read.csv("Flow.csv", header = T) %>%
   select('SiteID', 'MSID','EventID', 'DateStart', 'DateEnd',
    'TimeStart', 'TimeEnd', 'Volume_Total', 'Volume_Units',
@@ -38,28 +46,90 @@ flow <- read.csv("Flow.csv", header = T) %>%
   filter(Volume_Total > 0)
 
 
+
+## some quick data checks
 table(flow$Volume_Units)   ## need to convert volumes to L
+nrow(distinct(flow, SiteID))
+nrow(distinct(flow, MSID))
+nrow(distinct(flow, EventID))
+
+nrow(unique(flow[c('SiteID', 'MSID')]))
+nrow(unique(flow[c('SiteID', 'EventID')]))
+nrow(unique(flow[c('SiteID', 'EventID')]))
+check <- na.omit(flow$TimeEnd)  ## this is the number of event records with start and stop times
 
 
-newd <- ms.bmp %>%
+## combine the identifying data with the flow data
+
+flow.ID <- ms.bmp %>%
   left_join(flow, by = c("SiteID", "MSID"))
 
 
-long.wq <- read.csv("WaterQuality.csv", header = T) #%>%
+
+## Read in Analyte data
+## To simplify matters, we will do this one analyte group at a time
+## First, Phosphorus
+
+
+Phos <- read.csv("WaterQuality.csv", header = T)  %>%
   select('SiteID','MSID','EventID','DateSample','TimeSample',
-         'Analyte','Value_SubHalfDL', 'WQQualifier',
-         'SampleType','SampleFraction') %>%
-  filter(SampleType == 'EMC-Flow Weighted')
+         'Analyte','Value_SubHalfDL', 'SampleFraction', 'Value_Unit',         ## might want to double check WQQualifer and SampleFraction
+         'SampleType') %>%
+  filter(SampleType == 'EMC-Flow Weighted') %>%
+  filter(Analyte %in% c("Phosphorus as P", "Phosphorus, orthophosphate as P", "Orthophosphate", 
+                        "Phosphorus", "Phosphorus, orthophosphate as PO4", "Phosphorus, Particulate Organic", 
+                        "Phosphorus, organic as P")) %>%
+  mutate(Analyte_SampleType = paste(Analyte, SampleFraction)) %>%
+  select(-c("SampleFraction", "Analyte")) %>%
+  pivot_wider(names_from = 'Analyte_SampleType', values_from = 'Value_SubHalfDL' )  ##note collapse sampleTypes
+
+table(Phos$Value_Unit) 
 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+## reads in all WQ, but some issues here
+
+## long format
 wq <- read.csv("WaterQuality.csv", header = T)  %>%
   select('SiteID','MSID','EventID','DateSample','TimeSample',
          'Analyte','Value_SubHalfDL', 'WQQualifier',
-         'SampleType','SampleFraction') %>%
+         'SampleType','SampleFraction', 'Value_Unit') %>%
+  filter(SampleType == 'EMC-Flow Weighted')
+
+## wide format - has ISSUES
+wq <- read.csv("WaterQuality.csv", header = T)  %>%
+  select('SiteID','MSID','EventID','DateSample','TimeSample',
+         'Analyte','Value_SubHalfDL', 'WQQualifier',
+         'SampleType','SampleFraction', 'Value_Unit') %>%
   filter(SampleType == 'EMC-Flow Weighted') %>%
   pivot_wider(names_from = 'Analyte', values_from = 'Value_SubHalfDL' )  ##note collapse sampleTypes
+
+
+
+
+
+
+# 
+# long.wq <- read.csv("WaterQuality.csv", header = T) #%>%
+#   select('SiteID','MSID','EventID','DateSample','TimeSample',
+#          'Analyte','Value_SubHalfDL', 'WQQualifier',
+#          'SampleType','SampleFraction') %>%
+#   filter(SampleType == 'EMC-Flow Weighted')
+# 
+
+
 
 
 
@@ -79,7 +149,8 @@ Phos <- read.csv("WaterQuality.csv", header = T)  %>%
 
 
 all <- newd %>%
-  left_join(wq, by = c("SiteID", "MSID", "EventID"))
+  left_join(Phos, by = c("SiteID", "MSID", "EventID"))  %>%
+  filter(SampleType == 'EMC-Flow Weighted')
 
 
 
