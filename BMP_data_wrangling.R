@@ -34,7 +34,7 @@ bmp <- read.csv("BMPInfo.csv", header = TRUE)  %>%
 
 # Join monitoring station info with bmp info
 ms.bmp <- ms %>%
-  left_join(bmp, by = c("SiteID","BMPID") ) # ; rm(ms, bmp)
+  left_join(bmp, by = c("SiteID","BMPID") ) ; rm(ms, bmp)
 
 
 
@@ -49,20 +49,20 @@ flow <- read.csv("Flow.csv", header = T) %>%
 
 ## some quick data checks
 table(flow$Volume_Units)   ## need to convert volumes to L
-nrow(distinct(flow, SiteID))
-nrow(distinct(flow, MSID))
-nrow(distinct(flow, EventID))
-
-nrow(unique(flow[c('SiteID', 'MSID')]))
-nrow(unique(flow[c('SiteID', 'EventID')]))
-nrow(unique(flow[c('SiteID', 'EventID')]))
-check <- na.omit(flow$TimeEnd)  ## this is the number of event records with start and stop times
+# nrow(distinct(flow, SiteID))
+# nrow(distinct(flow, MSID))
+# nrow(distinct(flow, EventID))
+# 
+# nrow(unique(flow[c('SiteID', 'MSID')]))
+# nrow(unique(flow[c('SiteID', 'EventID')]))
+# nrow(unique(flow[c('SiteID', 'EventID')]))
+# check <- na.omit(flow$TimeEnd)  ## this is the number of event records with start and stop times
 
 
 ## combine the identifying data with the flow data
 
 flow.ID <- ms.bmp %>%
-  left_join(flow, by = c("SiteID", "MSID"))
+  left_join(flow, by = c("SiteID", "MSID")) ;rm(flow, ms.bmp)
 
 
 
@@ -71,42 +71,41 @@ flow.ID <- ms.bmp %>%
 ## First, Phosphorus
 
 
+# Phos <- read.csv("WaterQuality.csv", header = T)  %>%
+#   select('SiteID','MSID','EventID','DateSample','TimeSample',
+#          'Analyte','Value_SubHalfDL', 'SampleFraction', 'Value_Unit',         ## might want to double check WQQualifer and SampleFraction
+#          'SampleType') %>%
+#   filter(SampleType == 'EMC-Flow Weighted') %>%
+#   filter(Analyte %in% c("Phosphorus as P", "Phosphorus, orthophosphate as P", "Orthophosphate",
+#                         "Phosphorus", "Phosphorus, orthophosphate as PO4", "Phosphorus, Particulate Organic",
+#                         "Phosphorus, organic as P")) %>%
+#   mutate(Analyte_SampleType = paste(Analyte, SampleFraction)) %>%
+#   select(-c("SampleFraction", "Analyte")) %>%
+#   pivot_wider(names_from = 'Analyte_SampleType', values_from = 'Value_SubHalfDL' )  ##note collapse sampleTypes
+
+### merge Analyte naming convention
+old_names <-  c("Phosphorus as P Total","Phosphorus, orthophosphate as P NS", "Phosphorus Total", "Phosphorus Dissolved", 
+                "Orthophosphate Total", "Orthophosphate NS","Phosphorus, orthophosphate as P Dissolved", 
+                "Phosphorus, orthophosphate as PO4 NS", "Orthophosphate Dissolved", "Phosphorus as P Dissolved",  
+                "Phosphorus Total recoverable", "Phosphorus, orthophosphate as P Total", "Phosphorus, Particulate Organic NS",
+                "Phosphorus as P TOTAL" )
+new_names <- c("TP", "ortho-P", "TP", "TP.f", "ortho-P.uf", "ns", "ortho-P", "ortho-P-PO4", "ortho-P", "TP.f", "ns", 
+               "ortho-P.uf", "ns", "TP")
+key <- data.frame(old_names, new_names); rm(new_names, old_names)
+
+
 Phos <- read.csv("WaterQuality.csv", header = T)  %>%
   select('SiteID','MSID','EventID','DateSample','TimeSample',
          'Analyte','Value_SubHalfDL', 'SampleFraction', 'Value_Unit',         ## might want to double check WQQualifer and SampleFraction
          'SampleType') %>%
   filter(SampleType == 'EMC-Flow Weighted') %>%
+  filter(Value_SubHalfDL >= -0.001) %>%
   filter(Analyte %in% c("Phosphorus as P", "Phosphorus, orthophosphate as P", "Orthophosphate", 
                         "Phosphorus", "Phosphorus, orthophosphate as PO4", "Phosphorus, Particulate Organic", 
                         "Phosphorus, organic as P")) %>%
   mutate(Analyte_SampleType = paste(Analyte, SampleFraction)) %>%
   select(-c("SampleFraction", "Analyte")) %>%
-  pivot_wider(names_from = 'Analyte_SampleType', values_from = 'Value_SubHalfDL' )  ##note collapse sampleTypes
-
-
-old_names <- names(Phos)
-old_names <- old_names[8:21]
-new_names <- c("TP", "ortho-P", "TP", "TP.f", "ortho-P.uf", "ns", "ortho-P", "ortho-P-PO4", "ortho-P", "TP.f", "ns", 
-               "ortho-P.uf", "ns", "TP")
-
-
-rename <- data.frame(old_names)
-rename$new_names <- new_names
-#rename(names
-
-
-Phos <- read.csv("WaterQuality.csv", header = T)  %>%
-  select('SiteID','MSID','EventID','DateSample','TimeSample',
-         'Analyte','Value_SubHalfDL', 'SampleFraction', 'Value_Unit',         ## might want to double check WQQualifer and SampleFraction
-         'SampleType') %>%
-  filter(SampleType == 'EMC-Flow Weighted') %>%
-  filter(Analyte %in% c("Phosphorus as P", "Phosphorus, orthophosphate as P", "Orthophosphate", 
-                        "Phosphorus", "Phosphorus, orthophosphate as PO4", "Phosphorus, Particulate Organic", 
-                        "Phosphorus, organic as P")) %>%
-  mutate(Analyte_SampleType = paste(Analyte, SampleFraction)) %>%
-  select(-c("SampleFraction", "Analyte")) 
-
-Phos <- left_join(Phos, rename, by = c("Analyte_SampleType" = "old_names"))
+  left_join(key, by = c("Analyte_SampleType" = "old_names")) 
 
 table(Phos$new_names)
 
@@ -121,29 +120,23 @@ Phos$Value_harm[Phos$new_names=="ortho-P-PO4"] <- Phos$Value_harm[Phos$new_names
 
 ## create new column called "Analyte_harm" --- these are the harmonized analyte names to go with the harmonized analyte values
 old_names2 <- c("ns", "ortho-P", "ortho-P-PO4" , "ortho-P.uf", "TP", "TP.f")
-rename2 <-  data.frame(old_names2)
-new_names2 <-  c("ns", "ortho-P", "ortho-P" , "ortho-P.uf", "TP", "TP.f")
-rename2$Analyte_harm <- new_names2
-
-Phos <- left_join(Phos, rename2, by = c("new_names" = "old_names2"))
+Analyte_harm <-  c("ns", "ortho-P", "ortho-P" , "ortho-P.uf", "TP", "TP.f")
+key2 <- data.frame(old_names2, Analyte_harm) ; rm(old_names2, Analyte_harm)
+Phos <- left_join(Phos, key2, by = c("new_names" = "old_names2"))
 
 ## remove old analyte values and names from the dataset
 Phos <- Phos %>%
   select(-c("Value_SubHalfDL", "Analyte_SampleType", "SampleType", "new_names"))
 
-head(Phos)
+## average duplicate data points
+Phos <- aggregate(Value_harm ~ SiteID + MSID + EventID + DateSample + TimeSample + Value_Unit + Analyte_harm, data = Phos, FUN = mean)
 
 
-Phos.wide <- Phos %>%
+### pivot wide
+Phos.wide <- Phos  %>%
   pivot_wider(names_from = 'Analyte_harm', values_from = 'Value_harm' )  ##note collapse sampleTypes
 
-
-
-
-
-
-
-
+head(Phos.wide)
 
 
 
