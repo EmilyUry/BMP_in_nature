@@ -83,12 +83,88 @@ Phos <- read.csv("WaterQuality.csv", header = T)  %>%
   select(-c("SampleFraction", "Analyte")) %>%
   pivot_wider(names_from = 'Analyte_SampleType', values_from = 'Value_SubHalfDL' )  ##note collapse sampleTypes
 
+
+old_names <- names(Phos)
+old_names <- old_names[8:21]
+new_names <- c("TP", "ortho-P", "TP", "TP.f", "ortho-P.uf", "ns", "ortho-P", "ortho-P-PO4", "ortho-P", "TP.f", "ns", 
+               "ortho-P.uf", "ns", "TP")
+
+
+rename <- data.frame(old_names)
+rename$new_names <- new_names
+#rename(names
+
+
+Phos <- read.csv("WaterQuality.csv", header = T)  %>%
+  select('SiteID','MSID','EventID','DateSample','TimeSample',
+         'Analyte','Value_SubHalfDL', 'SampleFraction', 'Value_Unit',         ## might want to double check WQQualifer and SampleFraction
+         'SampleType') %>%
+  filter(SampleType == 'EMC-Flow Weighted') %>%
+  filter(Analyte %in% c("Phosphorus as P", "Phosphorus, orthophosphate as P", "Orthophosphate", 
+                        "Phosphorus", "Phosphorus, orthophosphate as PO4", "Phosphorus, Particulate Organic", 
+                        "Phosphorus, organic as P")) %>%
+  mutate(Analyte_SampleType = paste(Analyte, SampleFraction)) %>%
+  select(-c("SampleFraction", "Analyte")) 
+
+Phos <- left_join(Phos, rename, by = c("Analyte_SampleType" = "old_names"))
+
+table(Phos$new_names)
+
+
+### change units of ortho-P as PO4 to ortho-P as P
+## Phosphate = 95
+## P = 31
+## [ortho-P as PO4] * 31/95 = [ortho-p as P]
+Phos$Value_harm <- Phos$Value_SubHalfDL
+Phos$Value_harm[Phos$new_names=="ortho-P-PO4"] <- Phos$Value_harm[Phos$new_names=="ortho-P-PO4"]*(31/95)
+
+
+## create new column called "Analyte_harm" --- these are the harmonized analyte names to go with the harmonized analyte values
+old_names2 <- c("ns", "ortho-P", "ortho-P-PO4" , "ortho-P.uf", "TP", "TP.f")
+rename2 <-  data.frame(old_names2)
+new_names2 <-  c("ns", "ortho-P", "ortho-P" , "ortho-P.uf", "TP", "TP.f")
+rename2$Analyte_harm <- new_names2
+
+Phos <- left_join(Phos, rename2, by = c("new_names" = "old_names2"))
+
+## remove old analyte values and names from the dataset
+Phos <- Phos %>%
+  select(-c("Value_SubHalfDL", "Analyte_SampleType", "SampleType", "new_names"))
+
+head(Phos)
+
+
+Phos.wide <- Phos %>%
+  pivot_wider(names_from = 'Analyte_harm', values_from = 'Value_harm' )  ##note collapse sampleTypes
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###a <- stringr::str_extract(Phos.wide$TP, pattern = 'c')
+
+
 table(Phos$Value_Unit) 
+names(Phos)
+## what is the frequency of each analyte name
+3074 - nrow(Phos[which(Phos$`Phosphorus as P TOTAL` == "NULL"),])
 
-
-
-
-
+##table(Phos$SampleFraction)
 
 
 
