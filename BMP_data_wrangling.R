@@ -77,8 +77,8 @@ old_names <-  c("Phosphorus as P Total","Phosphorus, orthophosphate as P NS", "P
                 "Phosphorus, orthophosphate as PO4 NS", "Orthophosphate Dissolved", "Phosphorus as P Dissolved",  
                 "Phosphorus Total recoverable", "Phosphorus, orthophosphate as P Total", "Phosphorus, Particulate Organic NS",
                 "Phosphorus as P TOTAL" )
-new_names <- c("TP", "ortho-P", "TP", "TP.f", "ortho-P.uf", "ns", "ortho-P", "ortho-P-PO4", "ortho-P", "TP.f", "ns", 
-               "ortho-P.uf", "ns", "TP")
+new_names <- c("TP", "ortho-P", "TP", "TP.dis", "ortho-P", "ortho-P", "ortho-P", "ortho-P-PO4", "ns", "TP.dis", "TP", 
+               "ortho-P", "ns", "TP")
 key <- data.frame(old_names, new_names); rm(new_names, old_names)
 
 
@@ -107,8 +107,8 @@ Phos$Value_harm[Phos$new_names=="ortho-P-PO4"] <- Phos$Value_harm[Phos$new_names
 
 
 ## create new column called "Analyte_harm" --- these are the harmonized analyte names to go with the harmonized analyte values
-old_names2 <- c("ns", "ortho-P", "ortho-P-PO4" , "ortho-P.uf", "TP", "TP.f")
-Analyte_harm <-  c("ns", "ortho-P", "ortho-P" , "ortho-P.uf", "TP", "TP.f")
+old_names2 <- c("ns", "ortho-P", "ortho-P-PO4", "TP", "TP.dis")
+Analyte_harm <-  c("ns", "ortho-P", "ortho-P" ,  "TP", "TP.dis")
 key2 <- data.frame(old_names2, Analyte_harm) ; rm(old_names2, Analyte_harm)
 Phos <- left_join(Phos, key2, by = c("new_names" = "old_names2"))
 
@@ -122,7 +122,8 @@ Phos <- aggregate(Value_harm ~ SiteID + MSID + EventID + DateSample + TimeSample
 
 ### pivot wide
 Phos.wide <- Phos  %>%
-  pivot_wider(names_from = 'Analyte_harm', values_from = 'Value_harm' )  ##note collapse sampleTypes
+  pivot_wider(names_from = 'Analyte_harm', values_from = 'Value_harm' )  %>%    ##note collapse sampleTypes 
+  select(-c("ns"))
 
 head(Phos.wide)
 
@@ -131,16 +132,19 @@ head(Phos.wide)
 P.all <- flow.ID %>%
   left_join(Phos.wide, by = c("SiteID", "MSID", "EventID"))
 
-
-# %>%   drop_na('ortho-P')  # filter by a single analyte with measurements using this line
-
-
-
+TP.all <- flow.ID %>%
+  left_join(Phos.wide, by = c("SiteID", "MSID", "EventID")) %>%
+  drop_na('TP')  # filter by a single analyte with measurements using this line
 
 
+OrthoP.all <- flow.ID %>%
+  left_join(Phos.wide, by = c("SiteID", "MSID", "EventID")) %>%
+  drop_na('ortho-P') 
 
 
 
+
+### match inflow/outflow data
 
 
 
