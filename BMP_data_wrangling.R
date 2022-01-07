@@ -147,7 +147,14 @@ OrthoP.all <- flow.ID %>%
 ### match inflow/outflow data
 
 
+TP.wide <- TP.all[-3,] %>%               # there is randomly one duplicated measurment...grrr
+  select(-c("ortho-P", "TP.dis")) %>%
+  pivot_wider(id_cols = c("SiteID", "BMPID", "BMPType", "EventID", "DateStart", "Volume_Units", "Value_Unit"), 
+              names_from = 'MSType', values_from = c("Volume_Total", "TP")) 
 
+  
+TP.test <- TP.wide[-c(18,251,341,345,813,814,815,816,817,818,819,820,
+                     821,822,823,824,825,826,827,828,829,830,831,832,833,1151),]
 
 
 
