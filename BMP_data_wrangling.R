@@ -45,10 +45,12 @@ flow <- read.csv("Flow.csv", header = T) %>%
    'PeakFlow_Rate','PeakFlow_Units') %>%
   filter(Volume_Total > 0) %>%
   mutate(Volume_Total = case_when(Volume_Units == 'L' ~ Volume_Total/1000,
-                      Volume_Units == 'cf' ~ Volume_Total*0.0283, 
-                      Volume_Units == 'CF' ~ Volume_Total*0.0283, 
-                      Volume_Units == 'gal' ~ Volume_Total*0.00379, 
+                      Volume_Units == 'm3' ~ Volume_Total,           
+                      Volume_Units == 'cf' ~ Volume_Total*0.0283,
+                      Volume_Units == 'CF' ~ Volume_Total*0.0283,
+                      Volume_Units == 'gal' ~ Volume_Total*0.00379,
                       Volume_Units == 'AF' ~ Volume_Total*1233.5,))
+
 
 
 
@@ -173,26 +175,16 @@ TP.wide <- TP.all[-3,] %>%               # there is randomly one duplicated meas
 
 summary(TP.wide)
 TP.test <- na.omit(TP.wide)
-
-table(TP.test$BMPType)
-
-
-
+names(TP.test)[8] <- "Inflow_vol_m3"
+names(TP.test)[7] <- "Outflow_vol_m3"
 
 ### fix the volume issue, convert everything to m3
-
-TP.test <- TP.test %>% 
-  mutate(V5 = case_when(Volume_Units == 'L' ~ Volume_Total_Inflow/1000,
-                        Volume_Units == 'cf' ~ Volume_Total_Inflow*0.0283, 
-                        Volume_Units == 'CF' ~ Volume_Total_Inflow*0.0283, 
-                        Volume_Units == 'gal' ~ Volume_Total_Inflow*0.00379, 
-                        Volume_Units == 'AF' ~ Volume_Total_Inflow*1233.5,))
 
 
 write.csv(TP.test, file = "TP_toy.csv")
 
 
-
+table(TP.wide$Value_Unit)
 
 
 
