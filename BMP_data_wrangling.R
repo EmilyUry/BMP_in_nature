@@ -52,12 +52,6 @@ flow <- read.csv("Flow.csv", header = T) %>%
                       Volume_Units == 'AF' ~ Volume_Total*1233.5,))
 
 
-
-
-
-
-
-
 ## some quick data checks
 table(flow$Volume_Units)   ## need to convert volumes to L
 # nrow(distinct(flow, SiteID))
@@ -75,8 +69,6 @@ table(flow$Volume_Units)   ## need to convert volumes to L
 flow.ID <- ms.bmp %>%
   left_join(flow, by = c("SiteID", "MSID")) %>%
   select(-c(Volume_Units)) ;rm(flow, ms.bmp)
-
-
 
 
 ## Read in Analyte data
@@ -145,6 +137,9 @@ head(Phos.wide)
 P.all <- flow.ID %>%
   left_join(Phos.wide, by = c("SiteID", "MSID", "EventID"))
 
+
+## separate P data into 3 species [TP, OrthoP, TP.dis]
+
 TP.all <- flow.ID %>%
   left_join(Phos.wide, by = c("SiteID", "MSID", "EventID")) %>%
   drop_na('TP')  # filter by a single analyte with measurements using this line
@@ -153,43 +148,79 @@ TP.all <- flow.ID %>%
 OrthoP.all <- flow.ID %>%
   left_join(Phos.wide, by = c("SiteID", "MSID", "EventID")) %>%
   drop_na('ortho-P') 
+names(OrthoP.all)[17] <- "OP"  ## the hyphen causes issues later down the line
 
+
+TP.dis.all <- flow.ID %>%
+  left_join(Phos.wide, by = c("SiteID", "MSID", "EventID")) %>%
+  drop_na('TP.dis') 
 
 
 
 ### match inflow/outflow data
 
 
-TP.wide <- TP.all[-3,] %>%               # there is randomly one duplicated measurment...grrr
+### Total P
+
+TP.wide <- TP.all[-3,] %>%              
   select(-c("ortho-P", "TP.dis")) %>%
   pivot_wider(id_cols = c("SiteID", "BMPID", "BMPType", "EventID", "DateStart", "Value_Unit"), 
               names_from = 'MSType', values_from = c("Volume_Total", "TP"))  %>%
   mutate(C1 = as.character(TP_Outflow), C2 = as.character(TP_Inflow), C3 = as.character(Volume_Total_Inflow), 
          C4 = as.character(Volume_Total_Outflow)) %>%
-  filter(!grepl('c', C1 ), !grepl('c', C2 ), !grepl('c', C3 ), !grepl('c', C4 ) ) %>%
+  filter(!grepl('c', C1 ), !grepl('c', C2 ), !grepl('c', C3 ), !grepl('c', C4 ) ) %>%     #removes duplicate measures (21)
   mutate(TP_Outflow = as.double(C1), TP_Inflow = as.double(C2), Volume_Total_Inflow = as.double(C3), 
          Volume_Total_Outflow = as.double(C4)) %>%
   select(-c(C1, C2, C3, C4))
-  
-
-summary(TP.wide)
-TP.test <- na.omit(TP.wide)
-names(TP.test)[8] <- "Inflow_vol_m3"
-names(TP.test)[7] <- "Outflow_vol_m3"
-
-### fix the volume issue, convert everything to m3
 
 
-write.csv(TP.test, file = "TP_toy.csv")
+TP.final <- na.omit(TP.wide)
+names(TP.final)[8] <- "Inflow_vol_m3"
+names(TP.final)[7] <- "Outflow_vol_m3"
+
+write.csv(TP.final, file = "BMP_SUMMARY_TP.csv")
+
+
+###Ortho-P
+
+OrthoP.wide <- OrthoP.all[-3,] %>%              
+  select(-c("TP", "TP.dis")) %>%
+  pivot_wider(id_cols = c("SiteID", "BMPID", "BMPType", "EventID", "DateStart", "Value_Unit"), 
+              names_from = 'MSType', values_from = c("Volume_Total", "OP")) %>%
+  mutate(C1 = as.character(OP_Outflow), C2 = as.character(OP_Inflow), C3 = as.character(Volume_Total_Inflow), 
+         C4 = as.character(Volume_Total_Outflow)) %>%
+  filter(!grepl('c', C1 ), !grepl('c', C2 ), !grepl('c', C3 ), !grepl('c', C4 ) ) %>%
+  mutate(OP_Outflow = as.double(C1), OP_Inflow = as.double(C2), Volume_Total_Inflow = as.double(C3), 
+         Volume_Total_Outflow = as.double(C4)) %>%
+  select(-c(C1, C2, C3, C4))
+
+
+OrthoP.final <- na.omit(OrthoP.wide)
+names(OrthoP.final)[8] <- "Inflow_vol_m3"
+names(OrthoP.final)[7] <- "Outflow_vol_m3"
+
+write.csv(OrthoP.final, file = "BMP_SUMMARY_OrthoP.csv")
 
 
 
+### Total P (dissolved/filtered)
 
+TPdis.wide <- TP.dis.all[-3,] %>%              
+  select(-c("TP", "ortho-P"))  %>%
+  pivot_wider(id_cols = c("SiteID", "BMPID", "BMPType", "EventID", "DateStart", "Value_Unit"), 
+              names_from = 'MSType', values_from = c("Volume_Total", "TP.dis")) %>%
+  mutate(C1 = as.character(TP.dis_Outflow), C2 = as.character(TP.dis_Inflow), C3 = as.character(Volume_Total_Inflow), 
+         C4 = as.character(Volume_Total_Outflow)) %>%
+  filter(!grepl('c', C1 ), !grepl('c', C2 ), !grepl('c', C3 ), !grepl('c', C4 ) ) %>%
+  mutate(TP.dis_Outflow = as.double(C1), TP.dis_Inflow = as.double(C2), Volume_Total_Inflow = as.double(C3), 
+         Volume_Total_Outflow = as.double(C4)) %>%
+  select(-c(C1, C2, C3, C4))
 
+TPdis.final <- na.omit(TPdis.wide)
+names(TPdis.final)[8] <- "Inflow_vol_m3"
+names(TPdis.final)[7] <- "Outflow_vol_m3"
 
-
-
-
+write.csv(TPdis.final, file = "BMP_SUMMARY_TPdis.csv")
 
 
 
