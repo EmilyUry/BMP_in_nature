@@ -38,12 +38,21 @@ ms.bmp <- ms %>%
 
 
 
-# Read in flow data
+# Read in flow data ## and fix units!
 flow <- read.csv("Flow.csv", header = T) %>%
   select('SiteID', 'MSID','EventID', 'DateStart', 'DateEnd',
    'TimeStart', 'TimeEnd', 'Volume_Total', 'Volume_Units',
    'PeakFlow_Rate','PeakFlow_Units') %>%
-  filter(Volume_Total > 0)
+  filter(Volume_Total > 0) %>%
+  mutate(Volume_Total = case_when(Volume_Units == 'L' ~ Volume_Total/1000,
+                      Volume_Units == 'cf' ~ Volume_Total*0.0283, 
+                      Volume_Units == 'CF' ~ Volume_Total*0.0283, 
+                      Volume_Units == 'gal' ~ Volume_Total*0.00379, 
+                      Volume_Units == 'AF' ~ Volume_Total*1233.5,))
+
+
+
+
 
 
 
@@ -62,7 +71,9 @@ table(flow$Volume_Units)   ## need to convert volumes to L
 ## combine the identifying data with the flow data
 
 flow.ID <- ms.bmp %>%
-  left_join(flow, by = c("SiteID", "MSID")) ;rm(flow, ms.bmp)
+  left_join(flow, by = c("SiteID", "MSID")) %>%
+  select(-c(Volume_Units)) ;rm(flow, ms.bmp)
+
 
 
 
@@ -149,12 +160,60 @@ OrthoP.all <- flow.ID %>%
 
 TP.wide <- TP.all[-3,] %>%               # there is randomly one duplicated measurment...grrr
   select(-c("ortho-P", "TP.dis")) %>%
-  pivot_wider(id_cols = c("SiteID", "BMPID", "BMPType", "EventID", "DateStart", "Volume_Units", "Value_Unit"), 
-              names_from = 'MSType', values_from = c("Volume_Total", "TP")) 
-
+  pivot_wider(id_cols = c("SiteID", "BMPID", "BMPType", "EventID", "DateStart", "Value_Unit"), 
+              names_from = 'MSType', values_from = c("Volume_Total", "TP"))  %>%
+  mutate(C1 = as.character(TP_Outflow), C2 = as.character(TP_Inflow), C3 = as.character(Volume_Total_Inflow), 
+         C4 = as.character(Volume_Total_Outflow)) %>%
+  filter(!grepl('c', C1 ), !grepl('c', C2 ), !grepl('c', C3 ), !grepl('c', C4 ) ) %>%
+  mutate(TP_Outflow = as.double(C1), TP_Inflow = as.double(C2), Volume_Total_Inflow = as.double(C3), 
+         Volume_Total_Outflow = as.double(C4)) %>%
+  select(-c(C1, C2, C3, C4))
   
-TP.test <- TP.wide[-c(18,251,341,345,813,814,815,816,817,818,819,820,
-                     821,822,823,824,825,826,827,828,829,830,831,832,833,1151),]
+
+
+summary(TP.wide)
+TP.test <- na.omit(TP.wide)
+
+table(TP.test$BMPType)
+
+
+
+
+### fix the volume issue, convert everything to m3
+
+TP.test <- TP.test %>% 
+  mutate(V5 = case_when(Volume_Units == 'L' ~ Volume_Total_Inflow/1000,
+                        Volume_Units == 'cf' ~ Volume_Total_Inflow*0.0283, 
+                        Volume_Units == 'CF' ~ Volume_Total_Inflow*0.0283, 
+                        Volume_Units == 'gal' ~ Volume_Total_Inflow*0.00379, 
+                        Volume_Units == 'AF' ~ Volume_Total_Inflow*1233.5,))
+
+
+write.csv(TP.test, file = "TP_toy.csv")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
