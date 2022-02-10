@@ -28,7 +28,7 @@ ms <- read.csv("MonitoringStation.csv", header = TRUE)  %>%
   filter(MSType == "Inflow" | MSType == "Outflow")
 
 bmp <- read.csv("BMPInfo.csv", header = TRUE)  %>%
-  select(c('BMPID','SiteID','BMPType')) %>%
+  select(c('BMPID','SiteID','BMPType', 'DateInstalled')) %>%
   mutate(BMPType = as.factor(BMPType))
 
 
@@ -49,11 +49,13 @@ flow <- read.csv("Flow.csv", header = T) %>%
                       Volume_Units == 'cf' ~ Volume_Total*0.0283,
                       Volume_Units == 'CF' ~ Volume_Total*0.0283,
                       Volume_Units == 'gal' ~ Volume_Total*0.00379,
-                      Volume_Units == 'AF' ~ Volume_Total*1233.5,))
+                      Volume_Units == 'AF' ~ Volume_Total*1233.5,)) %>%
+  mutate(TimeStart = TimeStart - floor(TimeStart)) %>%
+  mutate(TimeEnd = TimeEnd - floor(TimeEnd))
 
 
 ## some quick data checks
-table(flow$Volume_Units)   ## need to convert volumes to L
+##table(flow$Volume_Units)   ## need to convert volumes to L
 # nrow(distinct(flow, SiteID))
 # nrow(distinct(flow, MSID))
 # nrow(distinct(flow, EventID))
@@ -76,15 +78,8 @@ flow.ID <- ms.bmp %>%
 ## First, Phosphorus
 
 
-### merge Analyte naming convention
-old_names <-  c("Phosphorus as P Total","Phosphorus, orthophosphate as P NS", "Phosphorus Total", "Phosphorus Dissolved", 
-                "Orthophosphate Total", "Orthophosphate NS","Phosphorus, orthophosphate as P Dissolved", 
-                "Phosphorus, orthophosphate as PO4 NS", "Orthophosphate Dissolved", "Phosphorus as P Dissolved",  
-                "Phosphorus Total recoverable", "Phosphorus, orthophosphate as P Total", "Phosphorus, Particulate Organic NS",
-                "Phosphorus as P TOTAL" )
-new_names <- c("TP", "ortho-P", "TP", "TP.dis", "ortho-P", "ortho-P", "ortho-P", "ortho-P-PO4", "ns", "TP.dis", "TP", 
-               "ortho-P", "ns", "TP")
-key <- data.frame(old_names, new_names); rm(new_names, old_names)
+
+P.key <- read.csv("Phos_Key.csv", head = TRUE)
 
 
 Phos <- read.csv("WaterQuality.csv", header = T)  %>%
@@ -98,7 +93,7 @@ Phos <- read.csv("WaterQuality.csv", header = T)  %>%
                         "Phosphorus, organic as P")) %>%
   mutate(Analyte_SampleType = paste(Analyte, SampleFraction)) %>%
   select(-c("SampleFraction", "Analyte")) %>%
-  left_join(key, by = c("Analyte_SampleType" = "old_names")) 
+  left_join(P.key, by = c("Analyte_SampleType" = "old_names")) 
 
 table(Phos$new_names)
 
@@ -164,7 +159,7 @@ TP.dis.all <- flow.ID %>%
 
 TP.wide <- TP.all[-3,] %>%              
   select(-c("ortho-P", "TP.dis")) %>%
-  pivot_wider(id_cols = c("SiteID", "BMPID", "BMPType", "EventID", "DateStart", "Value_Unit"), 
+  pivot_wider(id_cols = c("SiteID", "BMPID", "BMPType", "EventID", "DateStart", "TimeStart", "TimeEnd", "Value_Unit"), ### broke this by including Timestart and Time end
               names_from = 'MSType', values_from = c("Volume_Total", "TP"))  %>%
   mutate(C1 = as.character(TP_Outflow), C2 = as.character(TP_Inflow), C3 = as.character(Volume_Total_Inflow), 
          C4 = as.character(Volume_Total_Outflow)) %>%
@@ -174,9 +169,10 @@ TP.wide <- TP.all[-3,] %>%
   select(-c(C1, C2, C3, C4))
 
 
-TP.final <- na.omit(TP.wide)
-names(TP.final)[8] <- "Inflow_vol_m3"
-names(TP.final)[7] <- "Outflow_vol_m3"
+TP.final <- TP.wide[complete.cases(TP.wide[,12]),]
+TP.final <- TP.final[complete.cases(TP.final[,11]),]
+names(TP.final)[10] <- "Inflow_vol_m3"
+names(TP.final)[9] <- "Outflow_vol_m3"
 
 write.csv(TP.final, file = "BMP_SUMMARY_TP.csv")
 
