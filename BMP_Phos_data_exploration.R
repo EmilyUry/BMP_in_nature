@@ -52,6 +52,45 @@ plot(TP$Wat, TP$retention, main = "TP % Retention",
 
 
 
+### TP vs PO4 retention
+
+
+TP$species <- "TP"
+SRP$species <- "SRP"
+TPdis$species <- "TPdis"
+
+names(TP) <- c("X", "SiteID", "BMPID", "BMPType", "EventID", "DateStart",
+               "Value_Unit", "Outflow_vol_m3", "Inflow_vol_m3", 
+               "Outflow", "Inflow", "species")
+names(SRP) <- c("X", "SiteID", "BMPID", "BMPType", "EventID", "DateStart",
+                "Value_Unit", "Outflow_vol_m3", "Inflow_vol_m3", 
+                "Outflow", "Inflow", "species")
+names(TPdis) <- c("X", "SiteID", "BMPID", "BMPType", "EventID", "DateStart",
+                  "Value_Unit", "Outflow_vol_m3", "Inflow_vol_m3", 
+                  "Outflow", "Inflow", "species")
+
+data <- rbind(TP, SRP, TPdis)
+
+
+
+data$retention_percent <- (data$Inflow - data$Outflow) / data$Inflow
+data$flow_atten <- (data$Inflow_vol_m3-data$Outflow_vol_m3) / data$Inflow_vol_m3
+
+
+
+data <- data[which(data$flow_atten != 0), ]
+
+plot(data$flow_atten, data$retention_percent, 
+     ylim = c(-25,1), xlim = c(-25,1), 
+     col = c('red', 'blue', 'green')[as.factor(data$species)], 
+     pch = 16)
+legend("bottomleft", c("SRP", "TP", "TPdis"), pch = 16,  col = c('red', 'blue', 'green'))
+
+
+
+
+levels(as.factor(data$species))
+
 
 
 
