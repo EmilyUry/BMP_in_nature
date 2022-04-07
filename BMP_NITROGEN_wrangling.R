@@ -229,10 +229,10 @@ TKN.wide <- TKN.all[-3,] %>%
   select(-c("Nitrate", "Total Nitrogen", "Ammonia")) %>%
   pivot_wider(id_cols = c("SiteID", "BMPID", "BMPType", "EventID", "DateStart", "Value_Unit"), 
               names_from = 'MSType', values_from = c("Volume_Total", "TKN"))  %>%
-mutate(C1 = as.character(TKN_Outflow), C2 = as.character(TKN_Inflow), C3 = as.character(Volume_Total_Inflow),
+mutate(C1 = as.character(TKN_Inflow), C2 = as.character(TKN_Outflow), C3 = as.character(Volume_Total_Inflow),
        C4 = as.character(Volume_Total_Outflow)) %>%
 filter(!grepl('c', C1 ), !grepl('c', C2 ), !grepl('c', C3 ), !grepl('c', C4 ) ) %>%     #removes duplicate measures (21)
-mutate(TKN_Outflow = as.double(C1), TKN_Inflow = as.double(C2), Volume_Total_Inflow = as.double(C3),
+mutate(TKN_Inflow = as.double(C1), TKN_Outflow = as.double(C2), Volume_Total_Inflow = as.double(C3),
        Volume_Total_Outflow = as.double(C4)) %>%
 select(-c(C1, C2, C3, C4))
 
