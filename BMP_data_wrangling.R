@@ -133,7 +133,8 @@ head(Phos.wide)
 
 ### merge phosphorus data with flow data
 P.all <- flow.ID %>%
-  left_join(Phos.wide, by = c("SiteID", "MSID", "EventID"))
+  left_join(Phos.wide, by = c("SiteID", "MSID", "EventID")) 
+
 
 
 ## separate P data into 3 species [TP, OrthoP, TP.dis]
@@ -146,7 +147,7 @@ TP.all <- flow.ID %>%
 OrthoP.all <- flow.ID %>%
   left_join(Phos.wide, by = c("SiteID", "MSID", "EventID")) %>%
   drop_na('ortho-P') 
-names(OrthoP.all)[17] <- "OP"  ## the hyphen causes issues later down the line
+names(OrthoP.all)[15] <- "OP"  ## the hyphen causes issues later down the line
 
 
 TP.dis.all <- flow.ID %>%
@@ -166,18 +167,23 @@ TP.wide <- TP.all[-3,] %>%
                           #"TimeStart", "TimeEnd",
                           "Value_Unit"), ### broke this by including Timestart and Time end
               names_from = 'MSType', values_from = c("Volume_Total", "TP"))  %>%
-  mutate(C1 = as.character(TP_Outflow), C2 = as.character(TP_Inflow), C3 = as.character(Volume_Total_Inflow), 
+  mutate(C1 = as.character(TP_Inflow), C2 = as.character(TP_Outflow), C3 = as.character(Volume_Total_Inflow), 
          C4 = as.character(Volume_Total_Outflow)) %>%
   filter(!grepl('c', C1 ), !grepl('c', C2 ), !grepl('c', C3 ), !grepl('c', C4 ) ) %>%     #removes duplicate measures (21)
-  mutate(TP_Outflow = as.double(C1), TP_Inflow = as.double(C2), Volume_Total_Inflow = as.double(C3), 
+  mutate(TP_Inflow = as.double(C1), TP_Outflow = as.double(C2), Volume_Total_Inflow = as.double(C3), 
          Volume_Total_Outflow = as.double(C4)) %>%
-  select(-c(C1, C2, C3, C4))
+  select(-c(C1, C2, C3, C4)) %>%
+  relocate(TP_Outflow, .after = TP_Inflow)%>%
+  relocate(Volume_Total_Outflow, .after = Volume_Total_Inflow)
 
 
-TP.final <- TP.wide[complete.cases(TP.wide[,10]),] ## TP_In
-TP.final <- TP.final[complete.cases(TP.final[,9]),] ## TP_Out
-names(TP.final)[8] <- "Inflow_vol_m3"
-names(TP.final)[7] <- "Outflow_vol_m3"
+TP.final <- TP.wide[complete.cases(TP.wide[,10]),] ## TP_Outflow
+TP.final <- TP.final[complete.cases(TP.final[,9]),] ## TP_Inflow
+names(TP.final)[7] <- "Inflow_vol_m3"
+names(TP.final)[8] <- "Outflow_vol_m3"
+TP.final$Species <- "TP"
+names(TP.final)[9] <- "Inflow_mg_L"
+names(TP.final)[10] <- "Outflow_mg_L"
 
 write.csv(TP.final, file = "BMP_SUMMARY_TP.csv")
 
@@ -193,12 +199,17 @@ OrthoP.wide <- OrthoP.all[-3,] %>%
   filter(!grepl('c', C1 ), !grepl('c', C2 ), !grepl('c', C3 ), !grepl('c', C4 ) ) %>%
   mutate(OP_Outflow = as.double(C1), OP_Inflow = as.double(C2), Volume_Total_Inflow = as.double(C3), 
          Volume_Total_Outflow = as.double(C4)) %>%
-  select(-c(C1, C2, C3, C4))
+  select(-c(C1, C2, C3, C4)) %>%
+  relocate(OP_Outflow, .after = OP_Inflow)%>%
+  relocate(Volume_Total_Outflow, .after = Volume_Total_Inflow)
 
 
 OrthoP.final <- na.omit(OrthoP.wide)
-names(OrthoP.final)[8] <- "Inflow_vol_m3"
-names(OrthoP.final)[7] <- "Outflow_vol_m3"
+names(OrthoP.final)[7] <- "Inflow_vol_m3"
+names(OrthoP.final)[8] <- "Outflow_vol_m3"
+OrthoP.final$Species <- "OrthoP"
+names(OrthoP.final)[9] <- "Inflow_mg_L"
+names(OrthoP.final)[10] <- "Outflow_mg_L"
 
 write.csv(OrthoP.final, file = "BMP_SUMMARY_OrthoP.csv")
 
@@ -215,11 +226,16 @@ TPdis.wide <- TP.dis.all[-3,] %>%
   filter(!grepl('c', C1 ), !grepl('c', C2 ), !grepl('c', C3 ), !grepl('c', C4 ) ) %>%
   mutate(TP.dis_Outflow = as.double(C1), TP.dis_Inflow = as.double(C2), Volume_Total_Inflow = as.double(C3), 
          Volume_Total_Outflow = as.double(C4)) %>%
-  select(-c(C1, C2, C3, C4))
+  select(-c(C1, C2, C3, C4)) %>%
+  relocate(TP.dis_Outflow, .after = TP.dis_Inflow)%>%
+  relocate(Volume_Total_Outflow, .after = Volume_Total_Inflow)
 
 TPdis.final <- na.omit(TPdis.wide)
-names(TPdis.final)[8] <- "Inflow_vol_m3"
-names(TPdis.final)[7] <- "Outflow_vol_m3"
+names(TPdis.final)[7] <- "Inflow_vol_m3"
+names(TPdis.final)[8] <- "Outflow_vol_m3"
+TPdis.final$Species <- "TPdis"
+names(TPdis.final)[9] <- "Inflow_mg_L"
+names(TPdis.final)[10] <- "Outflow_mg_L"
 
 write.csv(TPdis.final, file = "BMP_SUMMARY_TPdis.csv")
 
