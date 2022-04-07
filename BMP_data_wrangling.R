@@ -41,7 +41,8 @@ ms.bmp <- ms %>%
 # Read in flow data ## and fix units!
 flow <- read.csv("Flow.csv", header = T) %>%
   select('SiteID', 'MSID','EventID', 'DateStart', 'DateEnd',
-   'TimeStart', 'TimeEnd', 'Volume_Total', 'Volume_Units',
+        # 'TimeStart', 'TimeEnd', 
+         'Volume_Total', 'Volume_Units',
    'PeakFlow_Rate','PeakFlow_Units') %>%
   filter(Volume_Total > 0) %>%
   mutate(Volume_Total = case_when(Volume_Units == 'L' ~ Volume_Total/1000,
@@ -49,13 +50,13 @@ flow <- read.csv("Flow.csv", header = T) %>%
                       Volume_Units == 'cf' ~ Volume_Total*0.0283,
                       Volume_Units == 'CF' ~ Volume_Total*0.0283,
                       Volume_Units == 'gal' ~ Volume_Total*0.00379,
-                      Volume_Units == 'AF' ~ Volume_Total*1233.5,)) %>%
-  mutate(TimeStart = TimeStart - floor(TimeStart)) %>%
-  mutate(TimeEnd = TimeEnd - floor(TimeEnd))
+                      Volume_Units == 'AF' ~ Volume_Total*1233.5,)) #%>%
+  #mutate(TimeStart = TimeStart - floor(TimeStart)) %>%
+  #mutate(TimeEnd = TimeEnd - floor(TimeEnd))
 
 
 ## some quick data checks
-##table(flow$Volume_Units)   ## need to convert volumes to L
+##table(flow$Volume_Units)   
 # nrow(distinct(flow, SiteID))
 # nrow(distinct(flow, MSID))
 # nrow(distinct(flow, EventID))
@@ -83,7 +84,7 @@ P.key <- read.csv("Phos_Key.csv", head = TRUE)
 
 
 Phos <- read.csv("WaterQuality.csv", header = T)  %>%
-  select('SiteID','MSID','EventID','DateSample','TimeSample',
+  select('SiteID','MSID','EventID','DateSample', #'TimeSample',
          'Analyte','Value_SubHalfDL', 'SampleFraction', 'Value_Unit',         ## might want to double check WQQualifer and SampleFraction
          'SampleType') %>%
   filter(SampleType == 'EMC-Flow Weighted') %>%
@@ -117,7 +118,9 @@ Phos <- Phos %>%
   select(-c("Value_SubHalfDL", "Analyte_SampleType", "SampleType", "new_names"))
 
 ## average duplicate data points
-Phos <- aggregate(Value_harm ~ SiteID + MSID + EventID + DateSample + TimeSample + Value_Unit + Analyte_harm, data = Phos, FUN = mean)
+Phos <- aggregate(Value_harm ~ SiteID + MSID + EventID + DateSample + 
+                    #TimeSample 
+                  + Value_Unit + Analyte_harm, data = Phos, FUN = mean)
 
 
 ### pivot wide
@@ -159,7 +162,9 @@ TP.dis.all <- flow.ID %>%
 
 TP.wide <- TP.all[-3,] %>%              
   select(-c("ortho-P", "TP.dis")) %>%
-  pivot_wider(id_cols = c("SiteID", "BMPID", "BMPType", "EventID", "DateStart", "TimeStart", "TimeEnd", "Value_Unit"), ### broke this by including Timestart and Time end
+  pivot_wider(id_cols = c("SiteID", "BMPID", "BMPType", "EventID", "DateStart", 
+                          #"TimeStart", "TimeEnd",
+                          "Value_Unit"), ### broke this by including Timestart and Time end
               names_from = 'MSType', values_from = c("Volume_Total", "TP"))  %>%
   mutate(C1 = as.character(TP_Outflow), C2 = as.character(TP_Inflow), C3 = as.character(Volume_Total_Inflow), 
          C4 = as.character(Volume_Total_Outflow)) %>%
@@ -169,10 +174,10 @@ TP.wide <- TP.all[-3,] %>%
   select(-c(C1, C2, C3, C4))
 
 
-TP.final <- TP.wide[complete.cases(TP.wide[,12]),]
-TP.final <- TP.final[complete.cases(TP.final[,11]),]
-names(TP.final)[10] <- "Inflow_vol_m3"
-names(TP.final)[9] <- "Outflow_vol_m3"
+TP.final <- TP.wide[complete.cases(TP.wide[,10]),] ## TP_In
+TP.final <- TP.final[complete.cases(TP.final[,9]),] ## TP_Out
+names(TP.final)[8] <- "Inflow_vol_m3"
+names(TP.final)[7] <- "Outflow_vol_m3"
 
 write.csv(TP.final, file = "BMP_SUMMARY_TP.csv")
 
