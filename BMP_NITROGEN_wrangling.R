@@ -85,19 +85,21 @@ flow.ID <- ms.bmp %>%
 ## To simplify matters, we will do this one analyte group at a time
 ## First, Phosphorus
 
-Analyte2 <- c('Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N',"Nitrogen, nitrate (NO3) as N",
-              'Nitrate', 'Nitrite',
-              'nitrogen', "Nitrogen", 'Nitrogen, nitrite (NO2) as N',
-              "Kjeldahl nitrogen", "Nitrogen, ammonium (NH4) as N",
-              'Nitrogen, ammonia as N')
-newAnalyte <- c("Nitrate", "Nitrate", 'Nitrate', 'Nitrate',
-                "Total Nitrogen", "Total Nitrogen", 'Nitrate',
-                'TKN', 'Ammonia', 'Ammonia')
+# Analyte2 <- c('Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N',"Nitrogen, nitrate (NO3) as N",
+#               'Nitrate', 'Nitrite',
+#               'nitrogen', "Nitrogen", 'Nitrogen, nitrite (NO2) as N',
+#               "Kjeldahl nitrogen", "Nitrogen, ammonium (NH4) as N",
+#               'Nitrogen, ammonia as N')
+# newAnalyte <- c("Nitrate", "Nitrate", 'Nitrate', 'Nitrate',
+#                 "Total Nitrogen", "Total Nitrogen", 'Nitrate',
+#                 'TKN', 'Ammonia', 'Ammonia')
 Keys <- data.frame(Analyte2,newAnalyte )
+unique(Nit$Analyte_SampleType)
 
 
 
-
+N.key <- read.csv("N_key.csv", head = TRUE) %>%
+  select(c("old_names", "new_names"))
 
 
 Nit <- read.csv("WaterQuality.csv", header = T)  %>%
@@ -105,7 +107,7 @@ Nit <- read.csv("WaterQuality.csv", header = T)  %>%
          'Analyte','Value_SubHalfDL', 'SampleFraction', 'Value_Unit',         ## might want to double check WQQualifer and SampleFraction
          'SampleType') %>%
   filter(SampleType == 'EMC-Flow Weighted') %>%
-  filter(Value_SubHalfDL >= -0.001) %>%
+  filter(Value_SubHalfDL >= -0.001) #%>%
   filter(Analyte %in% c("Nitrogen, nitrate (NO3) as N","Nitrogen, ammonium (NH4) as N", 
                         "Organic Nitrogen","Nitrogen, nitrite (NO2) as N",
                         "Nitrogen",  "nitrogen","Nitrogen, Nitrite (NO2) + Nitrate (NO3) as N",
@@ -119,7 +121,8 @@ Nit <- read.csv("WaterQuality.csv", header = T)  %>%
 
 
 
-#table(Nit$new_names)
+table(Nit$Analyte_SampleType)
+table(Nit$Analyte_harm)
 
 
 ### change units of ortho-P as PO4 to ortho-P as P
@@ -201,7 +204,7 @@ names(Ammonia.final)[9] <- "Inflow_mg_L"
 names(Ammonia.final)[10] <- "Outflow_mg_L"
 
 
-write.csv(Ammonia.final, file = "BMP_SUMMARY_AMMONIA.csv")
+#write.csv(Ammonia.final, file = "BMP_SUMMARY_AMMONIA.csv")
 
 
 ### Nitrate
@@ -219,7 +222,7 @@ Nitrate.final$Species <- "Nitrate"
 names(Nitrate.final)[9] <- "Inflow_mg_L"
 names(Nitrate.final)[10] <- "Outflow_mg_L"
 
-write.csv(Nitrate.final, file = "BMP_SUMMARY_Nitrate.csv")
+#write.csv(Nitrate.final, file = "BMP_SUMMARY_Nitrate.csv")
 
 
 
@@ -244,7 +247,7 @@ TKN.final$Species <- "TKN"
 names(TKN.final)[9] <- "Inflow_mg_L"
 names(TKN.final)[10] <- "Outflow_mg_L"
 
-write.csv(TKN.final, file = "BMP_SUMMARY_TKN.csv")
+#write.csv(TKN.final, file = "BMP_SUMMARY_TKN.csv")
 
 
 
@@ -263,10 +266,15 @@ TN.final$Species <- "TN"
 names(TN.final)[9] <- "Inflow_mg_L"
 names(TN.final)[10] <- "Outflow_mg_L"
 
-write.csv(Nitrate.final, file = "BMP_SUMMARY_TN.csv")
+#write.csv(TN.final, file = "BMP_SUMMARY_TN.csv")
 
 
 
+N_final <- rbind(Nitrate.final, TKN.final, TN.final, Ammonia.final)
+
+
+
+write.csv(P_final, file = "BMP_SUMMARY_P_all.csv")
 
 
 
