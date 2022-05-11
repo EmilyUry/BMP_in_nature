@@ -1,20 +1,15 @@
 
-
-
-
 #' BMP Project
 #' 
 #' BMP + Stormwater
 #' 
-#' Last update: January 27, 2022
+#' Last update: May 11, 2022
 
 
 # setwd("C:/Users/uryem/OneDrive - University of Waterloo/BMP_project") ## laptop
 setwd("C:/Users/Emily Ury/OneDrive - University of Waterloo/BMP_project")
 
-library(dplyr)
-library(tidyr)
-
+library(tidyverse)
 
 ### READ IN AND ORGANIZE ALL OF THE DATA
 
@@ -28,7 +23,7 @@ ms <- read.csv("MonitoringStation.csv", header = TRUE)  %>%
   filter(MSType == "Inflow" | MSType == "Outflow")
 
 bmp <- read.csv("BMPInfo.csv", header = TRUE)  %>%
-  select(c('BMPID','SiteID','BMPType', 'DateInstalled')) %>%
+  select(c('BMPID','SiteID','BMPType')) %>%
   mutate(BMPType = as.factor(BMPType))
 
 
@@ -37,49 +32,28 @@ ms.bmp <- ms %>%
   left_join(bmp, by = c("SiteID","BMPID") ) ; rm(ms, bmp)
 
 
-
 # Read in flow data ## and fix units!
 flow <- read.csv("Flow.csv", header = T) %>%
-  select('SiteID', 'MSID','EventID', 'DateStart', 'DateEnd',
-        # 'TimeStart', 'TimeEnd', 
-         'Volume_Total', 'Volume_Units',
-   'PeakFlow_Rate','PeakFlow_Units') %>%
+  select('SiteID', 'MSID','EventID', 'DateStart',
+         'Volume_Total', 'Volume_Units') %>%
   filter(Volume_Total > 0) %>%
   mutate(Volume_Total = case_when(Volume_Units == 'L' ~ Volume_Total/1000,
                       Volume_Units == 'm3' ~ Volume_Total,           
                       Volume_Units == 'cf' ~ Volume_Total*0.0283,
                       Volume_Units == 'CF' ~ Volume_Total*0.0283,
                       Volume_Units == 'gal' ~ Volume_Total*0.00379,
-                      Volume_Units == 'AF' ~ Volume_Total*1233.5,)) #%>%
-  #mutate(TimeStart = TimeStart - floor(TimeStart)) %>%
-  #mutate(TimeEnd = TimeEnd - floor(TimeEnd))
-
-
-## some quick data checks
-##table(flow$Volume_Units)   
-# nrow(distinct(flow, SiteID))
-# nrow(distinct(flow, MSID))
-# nrow(distinct(flow, EventID))
-# 
-# nrow(unique(flow[c('SiteID', 'MSID')]))
-# nrow(unique(flow[c('SiteID', 'EventID')]))
-# nrow(unique(flow[c('SiteID', 'EventID')]))
-# check <- na.omit(flow$TimeEnd)  ## this is the number of event records with start and stop times
+                      Volume_Units == 'AF' ~ Volume_Total*1233.5,)) %>%
+  mutate(Volume_Units = "m3")  #%>%
 
 
 ## combine the identifying data with the flow data
-
 flow.ID <- ms.bmp %>%
-  left_join(flow, by = c("SiteID", "MSID")) %>%
-  select(-c(Volume_Units)) ;rm(flow, ms.bmp)
+  left_join(flow, by = c("SiteID", "MSID")) ;rm(flow, ms.bmp)
 
 
 ## Read in Analyte data
 ## To simplify matters, we will do this one analyte group at a time
 ## First, Phosphorus
-
-
-
 P.key <- read.csv("Phos_Key.csv", head = TRUE) %>%
   select(c("old_names", "new_names"))
 
@@ -96,9 +70,6 @@ Phos <- read.csv("WaterQuality.csv", header = T)  %>%
   select(-c("SampleFraction", "Analyte", "SampleMedia")) %>%
   left_join(P.key, by = c("Analyte_SampleType" = "old_names")) 
 
-
-
-# table(Phos$Analyte_SampleType)
 table(Phos$new_names)
 
 
@@ -107,40 +78,93 @@ table(Phos$new_names)
 ## P = 31
 ## [ortho-P as PO4] * 31/95 = [ortho-p as P]
 Phos$Value_harm <- Phos$Value_SubHalfDL
-Phos$Value_harm[Phos$new_names=="ortho-P-PO4"] <- Phos$Value_harm[Phos$new_names=="ortho-P-PO4"]*(31/95)
-
-
+Phos$Value_harm[Phos$new_names=="orthoPPO4"] <- Phos$Value_harm[Phos$new_names=="orthoPPO4"]*(31/95)
 ## create new column called "Analyte_harm" --- these are the harmonized analyte names to go with the harmonized analyte values
-old_names2 <- c("ns", "ortho-P", "ortho-P-PO4", "TP", "TP.dis")
-Analyte_harm <-  c("ns", "ortho-P", "ortho-P" ,  "TP", "TP.dis")
+old_names2 <- c("ns", "orthoP", "orthoPPO4", "TP", "TP.dis")
+Analyte_harm <-  c("ns", "orthoP", "orthoP" ,  "TP", "TP.dis")
 key2 <- data.frame(old_names2, Analyte_harm) ; rm(old_names2, Analyte_harm)
 Phos <- left_join(Phos, key2, by = c("new_names" = "old_names2"))
-
 ## remove old analyte values and names from the dataset
 Phos <- Phos %>%
   select(-c("Value_SubHalfDL", "Analyte_SampleType", "SampleType", "new_names"))
+rm(P.key); rm(key2);
 
-
-###average duplicate data points
+###average field duplicates into one
 Phos <- aggregate(Value_harm ~ SiteID + MSID + EventID + 
                     #DateSample + TimeSample 
                   + Value_Unit + Analyte_harm, data = Phos, FUN = mean)
+#rename
+Phos <- Phos %>%
+  filter(Analyte_harm != "ns") %>%
+  droplevels() %>%
+  rename(Species = Analyte_harm)
 
+table(Phos$Species)
 
-### pivot wide
-Phos.wide <- Phos  %>%
-  pivot_wider(names_from = 'Analyte_harm', values_from = 'Value_harm' )  %>%    ##note collapse sampleTypes 
-  select(-c("ns"))
-
-head(Phos.wide)
 
 
 ### merge phosphorus data with flow data
-P.all <- flow.ID %>%
-  left_join(Phos.wide, by = c("SiteID", "MSID", "EventID")) 
+P.all <- Phos %>%
+  left_join(flow.ID, by = c("SiteID", "MSID", "EventID")) %>%
+  select(-c("DateStart")) %>%
+  mutate(Analyte_load = Value_harm*Volume_Total) %>%
+  mutate(load_units = "g_per_event")
+
+load.combine <-  aggregate(Analyte_load ~ SiteID + EventID + Species + BMPID + BMPType + MSType, FUN = sum, data = P.all)
+flow.combine <-  aggregate(Volume_Total ~ SiteID + EventID + Species + BMPID + BMPType + MSType, FUN = sum, data = P.all)
+
+data <- load.combine %>%
+  full_join(flow.combine, by = c("SiteID", "EventID", "Species", "BMPID", "BMPType", "MSType")) %>%
+  mutate(Analyte_concentration = Analyte_load/Volume_Total) %>% ## mg/L
+  pivot_wider(id_cols = c( "SiteID", "EventID", "Species", "BMPID", "BMPType"), 
+              names_from = 'MSType', 
+              values_from = c(Analyte_load, Volume_Total, Analyte_concentration)) %>%
+  mutate(load_units = "g/event") %>%
+  mutate(Volume_units = "m3/event") %>%
+  mutate(concentration_units = "mg/L")
+rm(load.combine); rm(flow.combine); rm(P.all); rm(Phos)
+data <- na.omit(data)          ### remove data without a matching inflow/outflow
+data <- data[,c(1,2,4,5, 3, 12, 6, 7, 13, 8,9, 14, 10, 11)]
+names(data) <- c("SiteID","EventID", "BMPID", "BMPType" ,  "Species", "Units_load","Load_in" ,"Load_out",
+                 "Units_vol", "Vol_in", "Vol_out", "Units_conc", "Conc_in", "Conc_out")
+
+
+### reintroduce dates
+dates <- flow.ID %>%
+  select(c("SiteID", "BMPID", "EventID", "DateStart")) %>%
+  distinct()
+
+P_final <- data %>%
+  left_join(dates, by = c("SiteID", "BMPID", "EventID"))
 
 
 
+## write out final data
+write.csv(P_final, "BMP_P_clean.csv")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Old workflow
 ## separate P data into 3 species [TP, OrthoP, TP.dis]
 
 TP.all <- flow.ID %>%
