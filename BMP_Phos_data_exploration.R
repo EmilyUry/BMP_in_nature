@@ -8,17 +8,62 @@ setwd("C:/Users/uryem/OneDrive - University of Waterloo/BMP_project")
 library(ggplot2)
 options(scipen=999)
 
-data <- read.csv("BMP_SUMMARY_P_all.csv")
+data <- read.csv("BMP_P_clean.csv")
 
 
-## calculate retention percent
-data$flow_atten <- (data$Inflow_vol_m3-data$Outflow_vol_m3) 
-data$flow_atten_percent <- (data$Inflow_vol_m3-data$Outflow_vol_m3) / data$Inflow_vol_m3 *100
+## calculate FLOW ATTENUATION
+data$flow_atten <- (data$Vol_in-data$Vol_out) 
+data$flow_atten_percent <- (data$Vol_in-data$Vol_out) / data$Vol_in *100
 
-data$Load_In <- data$Inflow_mg_L*data$Inflow_vol_m3
-data$Load_Out <- data$Outflow_mg_L*data$Outflow_vol_m3
-data$retention <- data$Load_In - data$Load_Out
-data$retention_percent <- (data$Load_In - data$Load_Out)/data$Load_In*100
+## calculate solute retention
+data$retention <- data$Load_in - data$Load_out
+data$retention_percent <- (data$Load_in - data$Load_out)/data$Load_in*100
+
+
+
+
+ggplot(data, aes(x = flow_atten_percent, y = retention_percent)) +
+  geom_point() +
+  facet_wrap(.~Species) +
+  ylim(-100,100) +
+  xlim(-100,100)
+
+data <- data[which(data$flow_atten_percent != 0),]
+data.select <- data %>%
+  filter(BMPType == "RP" | BMPType == "WB" | BMPType == "DB" | BMPType == "BR" |
+           BMPType == "BI" | BMPType == "BS" | BMPType == "WC" | BMPType == "PC" |
+         BMPType == "FS")
+
+ggplot(data.select, aes(x = flow_atten_percent, y = retention_percent, color = Species)) +
+  geom_point() +
+  facet_wrap(.~BMPType) +
+  ylim(-100,100) +
+  xlim(-100,100)
+
+ggplot(data.select, aes(x = flow_atten_percent, y = retention_percent)) +
+  geom_point() +
+  facet_wrap(Species~BMPType) +
+  ylim(-100,100) +
+  xlim(-100,100)
+
+
+RP <- data %>%
+  filter(BMPType == "RP")
+
+plot(RP$Vol_in, RP$Vol_out,
+     xlim = c(0,50000), ylim = c(0,40000))
+
+plot(RP$Vol_in, RP$Vol_out, log = "xy")
+
+filter <- RP[which(RP$flow_atten > -1000 & RP$flow_atten < 10000),]
+filter <- RP[which(RP$flow_atten_percent > -100 & RP$flow_atten != 0),]
+hist(filter$flow_atten_percent, breaks = 200)
+abline(v=0)
+
+
+
+
+
 
 
 data3 <- data[which(data$flow_atten_percent != 0 & data$flow_atten_percent > -30 & data$flow_atten_percent < 90),]
