@@ -246,12 +246,15 @@ names(TPdis.final)[9] <- "Outflow_mg_L"
 #write.csv(TPdis.final, file = "BMP_SUMMARY_TPdis.csv")
 
 
+### reintroduce dates
+dates <- flow.ID %>%
+  select(c("SiteID", "BMPID", "EventID", "DateStart")) %>%
+  distinct()
 
+P_final <- rbind(TP.final, OrthoP.final, TPdis.final) %>%
+  left_join(dates, by = c("SiteID", "BMPID", "EventID"))
 
-
-P_final <- rbind(TP.final, OrthoP.final, TPdis.final)
-
-
+## write out final csv
 
 write.csv(P_final, file = "BMP_SUMMARY_P_all.csv")
 
