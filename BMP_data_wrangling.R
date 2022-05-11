@@ -80,8 +80,8 @@ flow.ID <- ms.bmp %>%
 
 
 
-P.key <- read.csv("Phos_Key.csv", head = TRUE)
-
+P.key <- read.csv("Phos_Key.csv", head = TRUE) %>%
+  select(c("old_names", "new_names"))
 
 Phos <- read.csv("WaterQuality.csv", header = T)  %>%
   select('SiteID','MSID','EventID','DateSample', #'TimeSample',
@@ -96,6 +96,7 @@ Phos <- read.csv("WaterQuality.csv", header = T)  %>%
   select(-c("SampleFraction", "Analyte")) %>%
   left_join(P.key, by = c("Analyte_SampleType" = "old_names")) 
 
+# table(Phos$Analyte_SampleType)
 table(Phos$new_names)
 
 
@@ -185,7 +186,7 @@ TP.final$Species <- "TP"
 names(TP.final)[9] <- "Inflow_mg_L"
 names(TP.final)[10] <- "Outflow_mg_L"
 
-write.csv(TP.final, file = "BMP_SUMMARY_TP.csv")
+#write.csv(TP.final, file = "BMP_SUMMARY_TP.csv")
 
 
 ###Ortho-P
@@ -211,7 +212,7 @@ OrthoP.final$Species <- "OrthoP"
 names(OrthoP.final)[9] <- "Inflow_mg_L"
 names(OrthoP.final)[10] <- "Outflow_mg_L"
 
-write.csv(OrthoP.final, file = "BMP_SUMMARY_OrthoP.csv")
+#write.csv(OrthoP.final, file = "BMP_SUMMARY_OrthoP.csv")
 
 
 
@@ -237,16 +238,17 @@ TPdis.final$Species <- "TPdis"
 names(TPdis.final)[9] <- "Inflow_mg_L"
 names(TPdis.final)[10] <- "Outflow_mg_L"
 
-write.csv(TPdis.final, file = "BMP_SUMMARY_TPdis.csv")
+#write.csv(TPdis.final, file = "BMP_SUMMARY_TPdis.csv")
 
 
 
 
 
+P_final <- rbind(TP.final, OrthoP.final, TPdis.final)
 
 
 
-
+write.csv(P_final, file = "BMP_SUMMARY_P_all.csv")
 
 
 
