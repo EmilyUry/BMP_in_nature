@@ -80,7 +80,7 @@ ggplot(RP, aes(x = Species, y = retention_percent, fill = factor(Species))) +
   theme(legend.position = "none")
 
 
-### flow vs solute attenuation
+### flow attenuation % vs solute retention %
 ggplot(RP, aes(x = flow_atten_percent, y = retention_percent, color = factor(Species))) +
   geom_point() +
   facet_wrap(.~Species) +
@@ -91,7 +91,34 @@ ggplot(RP, aes(x = flow_atten_percent, y = retention_percent, color = factor(Spe
   theme(legend.position = "none")
 
 
+### flow versus solute retention %
+ggplot(RP, aes(x = log(Vol_in), y = retention_percent, color = factor(Species))) +
+  geom_point() +
+  facet_wrap(.~Species) +
+  scale_color_viridis(discrete= TRUE) +
+  ylim(-100,100) +
+  #xlim(-100,100) +
+  theme_bw(base_size = 16) +
+  theme(legend.position = "none")
 
+### flow versus solute retention zoomed in
+ggplot(RP, aes(x = log(Vol_in), y = retention, color = factor(Species))) +
+  geom_point() +
+  facet_wrap(.~Species) +
+  scale_color_viridis(discrete= TRUE) +
+  ylim(-100,5000) +
+  #xlim(-100,100) +
+  theme_bw(base_size = 16) +
+  theme(legend.position = "none")
 
+### flow versus solute retention zoomed out
+ggplot(RP, aes(x = log(Vol_in), y = retention, color = factor(Species))) +
+  geom_point() +
+  facet_wrap(.~Species) +
+  scale_color_viridis(discrete= TRUE) +
+  ylim(-30000,90000) +
+  #xlim(-100,100) +
+  theme_bw(base_size = 16) +
+  theme(legend.position = "none")
 
 
