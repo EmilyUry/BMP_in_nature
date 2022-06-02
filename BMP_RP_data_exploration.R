@@ -22,6 +22,8 @@ data <- rbind(Phos, Nit)
 data$flow_atten <- (data$Vol_in-data$Vol_out) 
 data$flow_atten_percent <- (data$Vol_in-data$Vol_out) / data$Vol_in *100
 
+hist(data$flow_atten, xlim = c(-10000, 10000), breaks = 1000)
+
 ## calculate solute retention
 data$retention <- data$Load_in - data$Load_out
 data$retention_percent <- (data$Load_in - data$Load_out)/data$Load_in*100
@@ -30,7 +32,7 @@ data$retention_percent <- (data$Load_in - data$Load_out)/data$Load_in*100
 filter <- data[which(data$flow_atten_percent != 0),]
 RP <- filter[which(filter$BMPType == "RP"),]
 
-
+unique(RP$SiteID)
 
 m <- as.data.frame(table(RP$Species))
 ggplot(m, aes(x = Var1, y = Freq, fill = Var1)) +
@@ -41,7 +43,6 @@ ggplot(m, aes(x = Var1, y = Freq, fill = Var1)) +
   geom_text(aes(label=Freq), vjust=-0.3, color="black",
             position = position_dodge(0.9), size=5) +
   ylim(0,480)
-
 
 
 ### Inflow Concentration
@@ -57,7 +58,7 @@ ggplot(RP, aes(x = Species, y = Conc_in, fill = factor(Species))) +
 ggplot(RP, aes(x = Species, y = Load_in, fill = factor(Species))) +
   geom_boxplot(trim = TRUE) +
   scale_fill_viridis(discrete= TRUE) +
-  ylim(0,500) +
+  coord_cartesian(ylim = c(0,20000)) +
   theme_bw(base_size = 16) +
   theme(legend.position = "none")
 
@@ -66,7 +67,8 @@ ggplot(RP, aes(x = Species, y = Load_in, fill = factor(Species))) +
 ggplot(RP, aes(x = Species, y = retention, fill = factor(Species))) +
   geom_boxplot(trim = TRUE) +
   scale_fill_viridis(discrete= TRUE) +
-  ylim(-100,500) +
+  coord_cartesian(ylim = c(-500,5000)) +
+  #ylim(-100,500) +
   theme_bw(base_size = 16) +
   theme(legend.position = "none")
 
@@ -75,7 +77,7 @@ ggplot(RP, aes(x = Species, y = retention, fill = factor(Species))) +
 ggplot(RP, aes(x = Species, y = retention_percent, fill = factor(Species))) +
   geom_boxplot(trim = TRUE) +
   scale_fill_viridis(discrete= TRUE) +
-  ylim(-100,100) +
+  coord_cartesian(ylim =c(-200,100)) +
   theme_bw(base_size = 16) +
   theme(legend.position = "none")
 
