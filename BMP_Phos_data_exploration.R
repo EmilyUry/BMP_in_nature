@@ -5,6 +5,7 @@
 setwd("C:/Users/Emily Ury/OneDrive - University of Waterloo/BMP_project")
 setwd("C:/Users/uryem/OneDrive - University of Waterloo/BMP_project")
 
+library(tidyverse)
 library(ggplot2)
 options(scipen=999)
 
@@ -90,7 +91,7 @@ data.wide <- data %>%
 
 
 ### compare retention percent across P species
-ggplot(data.wide, aes(x = TP, y = OrthoP, color = BMPType)) +
+ggplot(data.wide, aes(x = TP, y = orthoP, color = BMPType)) +
   geom_point() +
   xlim(-200,100) +
   ylim(-200,100) +
