@@ -38,7 +38,7 @@ data <- data %>%
   mutate(EventYear = paste(year0, year, sep = "")) %>%
   mutate(EventYear = as.integer(EventYear)) %>%
   mutate(BMPAge = EventYear - YearInstalled) %>%
-  select(-c('year', 'year0', 'DateInstalled', 'YearInstalled', 'EventYear'))
+  select(-c('X', 'year', 'year0', 'DateInstalled', 'YearInstalled', 'EventYear'))
 
 
 ## Dimensions
