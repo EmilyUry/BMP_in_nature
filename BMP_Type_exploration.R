@@ -11,64 +11,37 @@ library(ggplot2)
 library(viridis)
 options(scipen=999)
 
-Phos <- read.csv("BMP_P_clean.csv")
-Nit <- read.csv("BMP_N_clean.csv")
-data <- rbind(Phos, Nit)   ## merge N and P data
+select <- read.csv("BMP_Clean_filtered.csv", stringsAsFactors = TRUE)
 
-## Append BMP Age data
-{bmp <- read.csv("BMPInfo.csv", header = TRUE)  %>%
-  select(c('BMPID','SiteID', 'DateInstalled')) %>%
-  mutate(YearInstalled = stringi::stri_sub(DateInstalled, -4,)) %>%
-  mutate(YearInstalled = as.integer(YearInstalled))
-
-
-data <- data %>%
-  left_join(bmp, by = c("SiteID","BMPID"))  %>%
-  mutate(year = stringi::stri_sub(DateStart, -2 ,)) %>%
-  mutate(year0 = ifelse(year < 25, 20, 19)) %>%
-  mutate(EventYear = paste(year0, year, sep = "")) %>%
-  mutate(EventYear = as.integer(EventYear)) %>%
-  mutate(BMPAge = EventYear - YearInstalled) %>%
-  select(-c('year', 'year0'))}
-
-## calculate FLOW ATTENUATION
-data$flow_atten <- (data$Vol_in-data$Vol_out) 
-data$flow_atten_percent <- (data$Vol_in-data$Vol_out) / data$Vol_in *100
-## calculate solute retention
-data$retention <- data$Load_in - data$Load_out
-data$retention_percent <- (data$Load_in - data$Load_out)/data$Load_in*100
+### reorder factors
+select$BMPType <- factor(select$BMPType , levels=c('DB','RP','WB', "WC",  "BS/BI", "BR"))
+select$BMPType_name <- select$BMPType
+BMP_names <- c("Detention basin (dry)", "Retention pond", "Wetland basin", "Wetland channel", "Grass strip/swale", "Bioretention")
+levels(select$BMPType_name) <- BMP_names
+select$Species <- factor(select$Species , levels=c("NH4", "NO3","TKN", "TN" , "TP", "PO4"))
 
 
-### filter out events with  outflow more than 110% of inflow
-data10 <- data[which(data$flow_atten_percent > -10),]
-
-
-###write.csv(data10, "filtered_BMPdata.csv")
-
-## select BMP types of interest
-our_types <- c("BI", "BR", "BS", "DB", "RP", "WB", "WC" )
-select <- data10 %>%
-  filter(BMPType %in% our_types)
-select$BMPType <- factor(select$BMPType , levels=c('DB','RP','WB','BS', "BR", "BI", "WC"))
-BMP_names <- c("Detention basin (dry)", "Retention pond", "Wetland basin", "Grass swale","Bioretention", "Grass strip", "Wetland channel")
-#levels(select$BMPType) <- BMP_names
-
-select$Species <- factor(select$Species, levels=c("ammonia_N", "Nitrate_N", "TN", "TKN", "TP.dis", "orthoP","TP"))
-Species_names <-c("NH4", "NO3", "TN", "TKN", "disTP", "PO4", "TP")
-levels(select$Species) <- Species_names
-
-
-table(select$Species, select$BMPType)
-
+### LOG mass retention
+ggplot(select, aes(x = BMPType, y = log(retention), fill = factor(BMPType))) +
+  geom_boxplot(trim = TRUE) +
+  scale_fill_viridis(discrete= TRUE, name = "BMP Type", labels = BMP_names) +
+  #coord_cartesian(ylim = c(-500,10000)) +
+  #ylim(-100,500) +
+  theme_bw(base_size = 16) +
+  theme(legend.position = "bottom" ) +
+  facet_wrap(.~Species, nrow = 2, scales = "free") +
+  theme(axis.text=element_text(size=8)) +
+  ylab("log Retention (g/event)") +
+  xlab(" ")
 
 ### mass retention
-ggplot(select, aes(x = BMPType, y = retention, fill = factor(BMPType))) +
+ggplot(select, aes(x = BMPType, y = (retention), fill = factor(BMPType))) +
   geom_boxplot(trim = TRUE) +
   scale_fill_viridis(discrete= TRUE, name = "BMP Type", labels = BMP_names) +
   coord_cartesian(ylim = c(-500,10000)) +
   #ylim(-100,500) +
   theme_bw(base_size = 16) +
-  theme(legend.position = c(0.88,0.3) ) +
+  theme(legend.position = "bottom" ) +
   facet_wrap(.~Species, nrow = 2, scales = "free") +
   theme(axis.text=element_text(size=8)) +
   ylab("Retention (g/event)") +
@@ -78,10 +51,10 @@ ggplot(select, aes(x = BMPType, y = retention, fill = factor(BMPType))) +
 ggplot(select, aes(x = BMPType, y = retention_percent, fill = factor(BMPType))) +
   geom_boxplot(trim = TRUE) +
   scale_fill_viridis(discrete= TRUE, name = "BMP Type", labels = BMP_names) +
-  coord_cartesian(ylim = c(-200,100)) +
+  coord_cartesian(ylim = c(-250,100)) +
   #ylim(-100,500) +
   theme_bw(base_size = 16) +
-  theme(legend.position = c(0.88,0.3) ) +
+  theme(legend.position = "bottom" ) +
   facet_wrap(.~Species, nrow = 2, scales = "free") +
   theme(axis.text=element_text(size=8)) +
   geom_hline(yintercept = 0) +
@@ -106,7 +79,7 @@ ggplot(df, aes(x = BMPAge, y = retention_percent, color = BMPType)) +
   coord_cartesian(ylim = c(-200,100)) +
   facet_wrap(.~Species, nrow = 2, scales = "free") +
   theme_bw(base_size = 16) +
-  theme(legend.position = c(0.88,0.3) ) +
+  theme(legend.position = "bottom" ) +
   ylab("Percent retention") +
   xlab("BMP Age")
 
@@ -120,24 +93,23 @@ ggplot(df, aes(x = BMPAge, y = retention_percent, color = BMPType)) +
 
 ### find the complete cases
 CC <- select %>% 
-  select(c("SiteID", "EventID", "BMPID", "BMPType", "Species", "retention", "retention_percent")) %>%
+  select(c("SiteID", "EventID", "BMPID", "BMPType", "Species", "retention", "retention_percent", "BMPType_name")) %>%
   filter(Species  %in% c("TP", "PO4")) %>%
   distinct() %>%
   pivot_wider(names_from = Species, values_from = c("retention", "retention_percent"))
 new <- CC %>% drop_na
 ##n = 608
 
-
 plot(new$retention_percent_TP, new$retention_percent_PO4)
 
-ggplot(new, aes(x = retention_percent_TP, y = retention_percent_PO4, color = BMPType)) +
+ggplot(new, aes(x = retention_percent_TP, y = retention_percent_PO4, color = BMPType_name)) +
   geom_point() +
   scale_color_viridis(discrete= TRUE, name = "BMP Type", labels = BMP_names) +
   #geom_smooth(method = "lm", se = FALSE) +
   coord_cartesian(ylim = c(-200,100), xlim = c(-200,100)) +
-  facet_wrap(.~BMPType, nrow = 2, scales = "free") +
+  facet_wrap(.~BMPType_name, nrow = 2, scales = "free") +
   theme_bw(base_size = 12) +
-  theme(legend.position = c(0.88,0.2) ) +
+  theme(legend.position = "none") +
   ylab("PO4 retention (%)") +
   xlab("TP retention (%)") +
   geom_hline(yintercept = 0) +
