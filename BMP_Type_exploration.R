@@ -47,6 +47,22 @@ ggplot(select, aes(x = BMPType, y = (retention), fill = factor(BMPType))) +
   ylab("Retention (g/event)") +
   xlab(" ")
 
+### mass retention/area 
+
+select$n.ret <- select$retention/select$Area_ha/10000 #retention in g/event/m2
+hist(select$n.ret, breaks = 500, xlim =c(-5, 10))
+ggplot(select, aes(x = BMPType, y = (n.ret), fill = factor(BMPType))) +
+  geom_boxplot(trim = TRUE) +
+  scale_fill_viridis(discrete= TRUE, name = "BMP Type", labels = BMP_names) +
+  coord_cartesian(ylim = c(-1,5)) +
+  #ylim(-100,500) +
+  theme_bw(base_size = 16) +
+  theme(legend.position = "bottom" ) +
+  facet_wrap(.~Species, nrow = 2, scales = "free") +
+  theme(axis.text=element_text(size=8)) +
+  ylab("Retention (g/event/m2)") +
+  xlab(" ")
+
 ### percent retention
 ggplot(select, aes(x = BMPType, y = retention_percent, fill = factor(BMPType))) +
   geom_boxplot(trim = TRUE) +
@@ -62,7 +78,60 @@ ggplot(select, aes(x = BMPType, y = retention_percent, fill = factor(BMPType))) 
   xlab(" ")
 
 
+## percent retention points jitter
+ggplot(select, aes(x = BMPType, y = retention_percent, fill = factor(BMPType))) +
+  geom_violin() +
+  geom_jitter(color = "black", size = 0.4, alpha = 0.8, width = 0.2)+
+  scale_fill_viridis(discrete= TRUE, name = "BMP Type", labels = BMP_names) +
+  coord_cartesian(ylim = c(-250,100)) +
+  #ylim(-100,500) +
+  theme_bw(base_size = 16) +
+  theme(legend.position = "bottom" ) +
+  facet_wrap(.~Species, nrow = 2, scales = "free") +
+  theme(axis.text=element_text(size=8)) +
+  geom_hline(yintercept = 0) +
+  ylab("Percent retention") +
+  xlab(" ")
 
+col <- viridis(6)
+## percent retention points jitter
+ggplot(select, aes(x = BMPType, y = retention_percent, color = factor(BMPType))) +
+  geom_violin(color = "black") +
+  #scale_fill_viridis(discrete= TRUE, name = "BMP Type", labels = BMP_names) +
+  geom_jitter(size = 1, alpha = 1, width = 0.2)+
+  scale_color_viridis(discrete= TRUE, name = "BMP Type", labels = BMP_names) +
+  coord_cartesian(ylim = c(-250,100)) +
+  #ylim(-100,500) +
+  theme_bw(base_size = 16) +
+  theme(legend.position = "bottom" ) +
+  facet_wrap(.~Species, nrow = 2, scales = "free") +
+  theme(axis.text=element_text(size=8)) +
+  geom_hline(yintercept = 0) +
+  ylab("Percent retention") +
+  xlab(" ")
+
+### Percent retention no filter
+full <- read.csv("BMP_Clean_full.csv", stringsAsFactors = TRUE)
+
+### reorder factors
+full$BMPType <- factor(full$BMPType , levels=c('DB','RP','WB', "WC",  "BS/BI", "BR"))
+full$BMPType_name <- full$BMPType
+BMP_names <- c("Detention basin (dry)", "Retention pond", "Wetland basin", "Wetland channel", "Grass strip/swale", "Bioretention")
+levels(full$BMPType_name) <- BMP_names
+full$Species <- factor(full$Species , levels=c("NH4", "NO3","TKN", "TN" , "TP", "PO4"))
+
+ggplot(full, aes(x = BMPType, y = retention_percent, fill = factor(BMPType))) +
+  geom_boxplot(trim = TRUE) +
+  scale_fill_viridis(discrete= TRUE, name = "BMP Type", labels = BMP_names) +
+  coord_cartesian(ylim = c(-250,100)) +
+  #ylim(-100,500) +
+  theme_bw(base_size = 16) +
+  theme(legend.position = "bottom" ) +
+  facet_wrap(.~Species, nrow = 2, scales = "free") +
+  theme(axis.text=element_text(size=8)) +
+  geom_hline(yintercept = 0) +
+  ylab("Percent retention") +
+  xlab(" ")
 
 
 #### percent retention vs age
