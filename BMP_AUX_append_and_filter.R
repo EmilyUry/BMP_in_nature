@@ -44,7 +44,7 @@ data <- data %>%
 ## Dimensions
 
 dim <- read.csv("BMP_dimensions_all.csv", header = TRUE) %>%
-  select(c("BMPID", "Area_ha"))  %>% drop_na %>%
+  select(c("BMPID", "Area_ha", "Vol_m3", "Length_m"))  %>% #drop_na %>%
   unique()
 
 data <- data %>% 
