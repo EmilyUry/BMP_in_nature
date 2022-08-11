@@ -91,8 +91,8 @@ data2 <- x %>%
 data2$Long <- c(-90, -120, -105, -75, -80, -82, -85, -76, -85, -95, -95, -77, -72, -75, -83, -122, -100, -79, -121, -90, NA)
 data2$Lat <- c(  33, 36, 38, 38, 29, 33, 37, 40, 45, 48, 35,34, 43, 43, 42, 44, 30, 38, 47, 46, NA)
 
-data2[15,2] <- 0
-data2[7,2] <- 0
+data2[15,2] <- 0 ## remove cause retention in OH is negative
+data2[7,2] <- 0  ## same for KS
 
 ggplot(States, aes (long, lat)) +
   geom_map(map = States, aes(map_id=(region)), fill = "grey97", color = "grey20") +  #US BASE MAP
