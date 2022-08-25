@@ -54,7 +54,7 @@ data <- data %>%
 
 ### Location info
 
-loc <- read.csv("BMP_Location_Info.csv", header = TRUE)  %>%
+loc <- read.csv("BMP_GeospatialData_AI_Biomes.csv", header = TRUE) %>%
   unique()
 
 data <- data %>%
