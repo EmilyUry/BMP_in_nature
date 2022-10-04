@@ -30,12 +30,6 @@ levels(select$BMPType_name) <- BMP_names
 select$Species <- factor(select$Species , levels=c("TN","NH4", "NO3","TKN", "TP", "PO4"))
 
 
-select$BMPType <- factor(select$BMPType , levels=c('DB','RP','WB', "WC",  "BS/BI", "BR"))
-levels(select$BMPType) <- c("DB", "RP", "WB", "WC", "GS", "BR")
-BMP_names <- c("Detention basin (dry)", "Retention pond", "Wetland basin", "Wetland channel", "Grass strip/swale", "Bioretention")
-levels(select$BMPType_name) <- BMP_names
-select$Species <- factor(select$Species , levels=c("TN","NO3","NH4", "TKN", "TP", "PO4"))
-
 
 data <- select[which(select$Species != "TKN"),]
 
@@ -74,6 +68,48 @@ tiff(filename = "figures/Retention_BMPType.tif", height=4, width=6, units= "in",
 figure
 
 dev.off()
+
+
+
+
+### SUpplemental figure 2
+summary <- data %>%
+  group_by(Species, BMPType) %>%
+  summarise(count = n(), 
+            retention = median(retention)) %>%
+  mutate(retention = -300)
+
+figure <- ggplot(data, aes(x = BMPType, y = retention/1000, fill = factor(BMPType))) +
+  #geom_jitter(color = "black", size = 0.4, alpha = 0.8, width = 0.2)+
+  geom_boxplot(coef=1.5, outlier.shape = NA) +
+  scale_fill_manual(values = pal,  name = " ", labels = BMP_names) +
+  ylim(-1,3) + # chose not to use coorcartesian here, because in this case the outliers are ridiculous
+  theme_bw(base_size = 10) +
+  theme(legend.position = c(0.83,0.25), legend.key.size = unit(0.5, 'cm'),
+        legend.text=element_text(size=11),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+  facet_wrap(.~Species, nrow = 2, scales = "free") +
+  theme(axis.text=element_text(size=8)) +
+  geom_hline(yintercept = 0, size = .1) +
+  ylab("retention (kg/event)") +
+  xlab(" ") +
+  geom_text(data = summary, aes(y = -0.8, label = count), 
+            position = position_dodge(width = 1.0), size = 2.5, color = "gray40")
+
+figure
+
+
+
+
+tiff(filename = "figures/Retention_BMPType_supplement.tif", height=4, width=6, units= "in", res=800, compression= "lzw")
+
+figure
+
+dev.off()
+
+
+
+
 
 
 
