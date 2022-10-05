@@ -112,6 +112,59 @@ dev.off()
 
 
 
+### SUpplemental figure 3 (mass per area removed) g/m2
+summary <- data %>%
+  group_by(Species, BMPType) %>%
+  summarise(count = n(), 
+            retention = median(retention/Area_ha/10000, na.rm =TRUE)) 
+Species <- summary$Species
+BMPType <- summary$BMPType
+
+summary <- data %>%
+  filter(!is.na(Area_ha) ) %>%
+  group_by(Species, BMPType) %>%
+  summarise(count = n(), 
+            retention = median(retention/Area_ha/10000)) 
+
+
+count <- c(0, summary$count[1:5], 0, summary$count[6], 0, summary$count[7:9], 0, summary$count[10:14],
+               0, summary$count[15:19], 0, summary$count[20:24])
+retention <- rep(1,30)
+summary <- data.frame(Species, BMPType, count, retention)
+
+
+pal5 <- c("#d6e2c7", "#fff3c8", "#94ac8b", "#d7c5e6", "#c1c9e5", "#8f94c8" ) 
+
+figure <- ggplot(data, aes(x = BMPType, y = retention/Area_ha/10000, fill = factor(BMPType))) +
+  #geom_jitter(color = "black", size = 0.4, alpha = 0.8, width = 0.2)+
+  geom_boxplot(coef=1.5, outlier.shape = NA) +
+  scale_fill_manual(values = pal5,  name = " ", labels = BMP_names) +
+  ylim(-0.5,2) + # chose not to use coorcartesian here, because in this case the outliers are ridiculous
+  theme_bw(base_size = 10) +
+  theme(legend.position = c(0.83,0.25), legend.key.size = unit(0.5, 'cm'),
+        legend.text=element_text(size=11),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+  facet_wrap(.~Species, nrow = 2, scales = "free") +
+  theme(axis.text=element_text(size=8)) +
+  geom_hline(yintercept = 0, size = .1) +
+  ylab("retention (g/m2)") +
+  xlab(" ") +
+  geom_text(data = summary, aes(y = -0.4, label = count), 
+            position = position_dodge(width = 1.0), size = 2.5, color = "gray40") +
+  guides(fill = guide_legend(override.aes = list(fill = pal)))
+
+figure
+
+
+
+
+tiff(filename = "figures/Retention_BMPType_supplement2.tif", height=4, width=6, units= "in", res=800, compression= "lzw")
+
+figure
+
+dev.off()
+
+
 
 summary <- data %>%
   group_by(Species) %>%
