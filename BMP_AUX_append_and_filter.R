@@ -38,13 +38,14 @@ data <- data %>%
   mutate(EventYear = paste(year0, year, sep = "")) %>%
   mutate(EventYear = as.integer(EventYear)) %>%
   mutate(BMPAge = EventYear - YearInstalled) %>%
-  select(-c('X', 'year', 'year0', 'DateInstalled', 'YearInstalled', 'EventYear'))
+  select(-c('X', 'year', 'year0', 'DateInstalled'))
 
 
 ## Dimensions
 
 dim <- read.csv("BMP_dimensions_all.csv", header = TRUE) %>%
-  select(c("BMPID", "Area_ha", "Vol_m3", "Length_m"))  %>% #drop_na %>%
+  select(c("BMPID", "Area_ha", "Vol_m3", "Length_m"))  %>% 
+  mutate(Depth_m = Vol_m3/(Area_ha*10000)) %>%
   unique()
 
 data <- data %>% 
