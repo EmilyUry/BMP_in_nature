@@ -98,7 +98,7 @@ write.csv(select, "BMP_Clean_full.csv")
 ## filter for bad flows
 
 filter <- select[which(select$flow_atten_percent != 0),]
-filter <- select[which(select$flow_atten_percent > -10),]
+filter <- filter[which(filter$flow_atten_percent > -10),]
 
 
 ## write out filtered data
