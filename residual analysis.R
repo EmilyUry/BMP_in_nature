@@ -522,32 +522,48 @@ df$Lat <- data$latitude
 Species <- c("TN", "NH4", "NO3", "TP", "PO4")
 Drivers <- c("Area", "Depth", "Age", "Vol", "Load", "Conc", "AI", "Lat")
 
-
-
-
-# 
-# table <- data.frame(matrix(ncol = 8, nrow = 3))
-# for (j in 1:5) {
-#   subset <- df[df$Species == Species[j],]
-#    for (i in 1:8) {
-#       m <- lm(subset$residual~subset[,i+3])
-#       table[j,i] <- coef(summary(m))[2,4]
-#   }
-# }
-# 
-# WB <- df[df$BMPType == "WB",]
-# table <- data.frame(matrix(ncol = 8, nrow = 3))
-# for (j in 1:5) {
-#   subset <- WB[WB$Species == Species[j],]
-#   for (i in 1:8) {
-#     m <- lm(subset$residual~subset[,i+3])
-#     table[j,i] <- coef(summary(m))[2,4]
-#   }
-# }
-
-
-
 cor.fun <- function(input){
+  output <- data.frame(matrix(ncol = 8, nrow = 3))
+  for (j in 1:5) {
+    subset <- input[input$Species == Species[j],]
+    for (i in 1:8) {
+      if (length(unique(c(subset[,i+3], NA))) > 2) {
+        #m <- lm(subset$residual~subset[,i+3])
+        #output[j,i] <- coef(summary(m))[2,4]
+        output[j,i] <- cor(subset[, i+3], subset[,3], use = "na.or.complete")
+      }
+    }
+  }
+  names(output) <- Drivers
+  rownames(output) <- Species
+  round(output,3)
+}
+
+cor.fun(df)
+
+
+BR <- df[df$BMPType == "BR",]
+BR.table <- cor.fun(BR)
+GS <- df[df$BMPType == "GS",]
+GS.table <- cor.fun(GS)
+DB <- df[df$BMPType == "DB",]
+DB.table <- cor.fun(DB)
+RP <- df[df$BMPType == "RP",]
+RP.table <- cor.fun(RP)
+WB <- df[df$BMPType == "WB",]
+WB.table <- cor.fun(WB)
+WC <- df[df$BMPType == "WC",]
+WC.table <- cor.fun(WC)
+
+cor.table <- rbind(BR.table, GS.table, DB.table, RP.table, WB.table, WC.table)
+cor.table$BMPType <- rep(c("BR", "GS", "DB", "RP", "WB", "WC"), each = 5)
+cor.table$BMP_names <- rep(BMP_names, each = 5)
+cor.table$Species <- rep(c("TN", "NH4", "NO3", "TP", "PO4"), 6)
+
+
+
+
+sig.fun <- function(input){
   output <- data.frame(matrix(ncol = 8, nrow = 3))
   for (j in 1:5) {
     subset <- input[input$Species == Species[j],]
@@ -563,45 +579,35 @@ cor.fun <- function(input){
   round(output,3)
 }
 
-cor.fun(df)
-
-
-
-
+sig.fun(df)
 
 BR <- df[df$BMPType == "BR",]
-BR.table <- cor.fun(BR)
-
-
+BR.table <- sig.fun(BR)
 GS <- df[df$BMPType == "GS",]
-GS.table <- cor.fun(GS)
-
-
+GS.table <- sig.fun(GS)
 DB <- df[df$BMPType == "DB",]
-DB.table <- cor.fun(DB)
-
-
+DB.table <- sig.fun(DB)
 RP <- df[df$BMPType == "RP",]
-RP.table <- cor.fun(RP)
-
+RP.table <- sig.fun(RP)
 WB <- df[df$BMPType == "WB",]
-WB.table <- cor.fun(WB)
-
-
+WB.table <- sig.fun(WB)
 WC <- df[df$BMPType == "WC",]
-WC.table <- cor.fun(WC)
+WC.table <- sig.fun(WC)
+
+p.value.table <- rbind(BR.table, GS.table, DB.table, RP.table, WB.table, WC.table)
+p.value.table$BMPType <- rep(c("BR", "GS", "DB", "RP", "WB", "WC"), each = 5)
+p.value.table$BMP_names <- rep(BMP_names, each = 5)
+p.value.table$Species <- rep(c("TN", "NH4", "NO3", "TP", "PO4"), 6)
 
 
-
-
-
-sig <- c(coef(summary(lm(residual~log(Area_ha), data = data[data$Species == "TN",])))[2,4],
-         coef(summary(lm(residual~log(Area_ha), data = data[data$Species == "NH4",])))[2,4],
-         coef(summary(lm(residual~log(Area_ha), data = data[data$Species == "NO3",])))[2,4],
-         coef(summary(lm(residual~log(Area_ha), data = data[data$Species == "TP",])))[2,4],
-         coef(summary(lm(residual~log(Area_ha), data = data[data$Species == "PO4",])))[2,4])
-names(sig)<- c("TN", "NH4", "NO3", "TP", "PO4")
-
+# 
+# sig <- c(coef(summary(lm(residual~log(Area_ha), data = data[data$Species == "TN",])))[2,4],
+#          coef(summary(lm(residual~log(Area_ha), data = data[data$Species == "NH4",])))[2,4],
+#          coef(summary(lm(residual~log(Area_ha), data = data[data$Species == "NO3",])))[2,4],
+#          coef(summary(lm(residual~log(Area_ha), data = data[data$Species == "TP",])))[2,4],
+#          coef(summary(lm(residual~log(Area_ha), data = data[data$Species == "PO4",])))[2,4])
+# names(sig)<- c("TN", "NH4", "NO3", "TP", "PO4")
+# 
 
 
 
