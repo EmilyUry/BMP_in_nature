@@ -14,6 +14,7 @@ setwd("C:/Users/uryem/OneDrive - University of Waterloo/BMP_project")
 library(tidyverse)
 library(ggplot2)
 library(cowplot)
+library(RColorBrewer)
 
 options(scipen=999)
 
@@ -56,7 +57,7 @@ data %>%
   geom_point() +
   scale_color_manual(values = pal)+
   theme_bw(base_size=10) +
-  #geom_smooth(method = "lm", se = FALSE) +
+  geom_smooth(method = "lm", se = FALSE) +
   #ggtitle(expression(TN)) +
   xlab("Water attenuation (%)") +
   ylab("Solute retention (%)") +
@@ -100,7 +101,7 @@ mod <- lm(retention_percent ~ flow_atten_percent, data = data)
 summary <- c(summary(mod)$coefficients[,1][[2]], summary(mod)$coefficients[,1][[1]], summary(mod)$coefficients[,4][[2]], summary(mod)$adj.r.squared, cor(data$flow_atten_percent, data$retention_percent), nrow(data)  )
 summary <- data.frame(summary)
 rownames(summary) <- c("slope", "intercept", "P", "R2_adj", "Corr", "n" )
-summary
+round(summary, 4)
 
 data$residual <- residuals(mod)
 data$predicted <- predict(mod)
@@ -493,20 +494,11 @@ plot_grid(Area, Depth, Age, Vol, Load, Conc, AI, Lat, nrow = 1,
 
 
 
-#### heat map of correlation values (R2 and significance)
+#### Generating tables of the correlation values and P-values
 
-WB <- data[data$BMPType == "WB",]
-#input <- WB
-my.fun <- function(input){
-  m <- lm(residual~log(Area_ha), data = input)
-  p.value <- coef(summary())[2,4]
-  corr <- cor(input$residual, log(input$Area_ha))
-  out <- c(corr, p.value)
-  out
-}
-sapply(split(WB, WB$Species), function(x)my.fun(x))
 
-Species <- c("TN", "NH4", "NO3", "TP", "PO4")
+
+## selecting the data
 
 df <- data[,5:6]
 df$residuals <- data$residual
@@ -540,6 +532,8 @@ cor.fun <- function(input){
 }
 
 cor.fun(df)
+cor.table.all <- cor.fun(df)
+cor.table.all$Species <- rep(c("TN", "NH4", "NO3", "TP", "PO4"))
 
 
 BR <- df[df$BMPType == "BR",]
@@ -559,10 +553,9 @@ cor.table <- rbind(BR.table, GS.table, DB.table, RP.table, WB.table, WC.table)
 cor.table$BMPType <- rep(c("BR", "GS", "DB", "RP", "WB", "WC"), each = 5)
 cor.table$BMP_names <- rep(BMP_names, each = 5)
 cor.table$Species <- rep(c("TN", "NH4", "NO3", "TP", "PO4"), 6)
+cor.table
 
-
-
-
+### P value function
 sig.fun <- function(input){
   output <- data.frame(matrix(ncol = 8, nrow = 3))
   for (j in 1:5) {
@@ -580,6 +573,9 @@ sig.fun <- function(input){
 }
 
 sig.fun(df)
+sig.table.all <- sig.fun(df)
+sig.table.all$Species <- rep(c("TN", "NH4", "NO3", "TP", "PO4"))
+
 
 BR <- df[df$BMPType == "BR",]
 BR.table <- sig.fun(BR)
@@ -599,19 +595,101 @@ p.value.table$BMPType <- rep(c("BR", "GS", "DB", "RP", "WB", "WC"), each = 5)
 p.value.table$BMP_names <- rep(BMP_names, each = 5)
 p.value.table$Species <- rep(c("TN", "NH4", "NO3", "TP", "PO4"), 6)
 
-
-# 
-# sig <- c(coef(summary(lm(residual~log(Area_ha), data = data[data$Species == "TN",])))[2,4],
-#          coef(summary(lm(residual~log(Area_ha), data = data[data$Species == "NH4",])))[2,4],
-#          coef(summary(lm(residual~log(Area_ha), data = data[data$Species == "NO3",])))[2,4],
-#          coef(summary(lm(residual~log(Area_ha), data = data[data$Species == "TP",])))[2,4],
-#          coef(summary(lm(residual~log(Area_ha), data = data[data$Species == "PO4",])))[2,4])
-# names(sig)<- c("TN", "NH4", "NO3", "TP", "PO4")
-# 
+p.value.table
 
 
 
+##################### heat maps
 
+### for all BMPtypes together
+cor.table.long <- cor.table.all %>%
+  pivot_longer(cols = Area:Lat,
+               names_to = "Variable",
+               values_to = "Correlation")
+p.table.long <- sig.table.all %>%
+  pivot_longer(cols = Area:Lat,
+               names_to = "Variable",
+               values_to = "P_value")
+figure.table <- cor.table.long %>%
+  left_join(p.table.long, by = c("Species", "Variable"))
+
+figure.table$sig.cor <- ifelse(figure.table$P_value < 0.1, figure.table$Correlation, NA)
+figure.table$stars <- ifelse(figure.table$P_value < 0.001, "***", 
+                             ifelse(figure.table$P_value < 0.05, "**", 
+                                    ifelse(figure.table$P_value < 0.1, "*", NA)))
+figure.table$label <- paste(round(figure.table$sig.cor, 2),"\n", figure.table$stars)
+
+figure.table$label[figure.table$label == "NA \n NA"] <- ""
+
+
+head(figure.table)
+
+figure.table$Species <- factor(figure.table$Species, levels = rev(c("TN", "NH4", "NO3", "TP", "PO4")))
+figure.table$Variable <- factor(figure.table$Variable, levels = c("Area", "Depth", "Age", "Vol", "Load", "Conc", "AI", "Lat") )
+
+cor.plot <- ggplot(figure.table, aes(x = Variable, y = Species, fill = sig.cor)) +
+  geom_tile() +
+  geom_text(aes(label = label), size = 2.2) +
+  scale_fill_distiller(palette = "RdBu", direction = 1, na.value = "#54545400") +
+  #facet_wrap(.~BMP_names) +
+  theme_bw(base_size = 10) +
+  theme(legend.position = "bottom",  
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5), 
+        legend.title = element_blank()) 
+cor.plot
+
+tiff(filename = "figures/residual_correlations_all_types.tif", height = 3, width = 4, units = "in", res = 800, compression = "lzw")
+cor.plot
+dev.off()
+
+
+
+### for each BMP type separately
+
+cor.table.long <- cor.table %>%
+  pivot_longer(cols = Area:Lat,
+               names_to = "Variable",
+               values_to = "Correlation")
+p.table.long <- p.value.table %>%
+  pivot_longer(cols = Area:Lat,
+               names_to = "Variable",
+               values_to = "P_value")
+figure.table <- cor.table.long %>%
+  left_join(p.table.long, by = c("BMPType", "BMP_names", "Species", "Variable"))
+
+figure.table$sig.cor <- ifelse(figure.table$P_value < 0.1, figure.table$Correlation, NA)
+figure.table$stars <- ifelse(figure.table$P_value < 0.001, "***", 
+                             ifelse(figure.table$P_value < 0.05, "**", 
+                                    ifelse(figure.table$P_value < 0.1, "*", NA)))
+figure.table$label <- paste(round(figure.table$sig.cor, 2),"\n", figure.table$stars)
+
+figure.table$label[figure.table$label == "NA \n NA"] <- ""
+
+
+head(figure.table)
+
+figure.table$BMP_names <- factor(figure.table$BMP_names, levels = c("Bioretention","Grass strip/swale", "Detention basin", "Retention pond", "Wetland basin", "Wetland channel") )
+figure.table$Species <- factor(figure.table$Species, levels = rev(c("TN", "NH4", "NO3", "TP", "PO4")))
+figure.table$Variable <- factor(figure.table$Variable, levels = c("Area", "Depth", "Age", "Vol", "Load", "Conc", "AI", "Lat") )
+
+cor.plot <- ggplot(figure.table, aes(x = Variable, y = Species, fill = sig.cor)) +
+  geom_tile() +
+  geom_text(aes(label = label), size = 2.2) +
+  scale_fill_distiller(palette = "RdBu", direction = 1, na.value = "#54545400") +
+  facet_wrap(.~BMP_names) +
+  theme_bw(base_size = 10) +
+  theme(legend.position = "bottom",  
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5), 
+        legend.title = element_blank()) 
+cor.plot
+
+tiff(filename = "figures/residual_correlations.tif", height = 5, width = 6, units = "in", res = 800, compression = "lzw")
+cor.plot
+dev.off()
 
 
 
@@ -622,4 +700,173 @@ p.value.table$Species <- rep(c("TN", "NH4", "NO3", "TP", "PO4"), 6)
 # wet/dry
 # planted/unplanted
 # basin/channel
+
+
+
+
+
+
+
+
+
+
+
+
+### extra stuff
+
+
+## corrplot residuals across all predictors for each bmptype, (solutes combined)
+BMPType <- levels(df$BMPType)
+
+
+head(df)
+cor.fun2 <- function(input){
+  output <- data.frame(matrix(ncol = 8, nrow = 3))
+  for (j in 1:6) {
+    subset <- input[input$BMPType == BMPType[j],]
+    for (i in 1:8) {
+      if (length(unique(c(subset[,i+3], NA))) > 2) {
+        #m <- lm(subset$residual~subset[,i+3])
+        #output[j,i] <- coef(summary(m))[2,4]
+        output[j,i] <- cor(subset[, i+3], subset[,3], use = "na.or.complete")
+      }
+    }
+  }
+  names(output) <- Drivers
+  rownames(output) <- BMPType
+  round(output,3)
+}
+
+cor.fun2(df)
+cor.table.all <- cor.fun2(df)
+cor.table.all$BMPType <- BMPType
+
+### P value function
+sig.fun2 <- function(input){
+  output <- data.frame(matrix(ncol = 8, nrow = 3))
+  for (j in 1:6) {
+    subset <- input[input$BMPType == BMPType[j],]
+    for (i in 1:8) {
+      if (length(unique(c(subset[,i+3], NA))) > 2) {
+        m <- lm(subset$residual~subset[,i+3])
+        output[j,i] <- coef(summary(m))[2,4]
+      }
+    }
+  }
+  names(output) <- Drivers
+  rownames(output) <- BMPType
+  round(output,3)
+}
+
+sig.fun2(df)
+sig.table.all <- sig.fun2(df)
+sig.table.all$BMPType <- BMPType
+
+
+### for all BMPtypes together
+cor.table.long <- cor.table.all %>%
+  pivot_longer(cols = Area:Lat,
+               names_to = "Variable",
+               values_to = "Correlation")
+p.table.long <- sig.table.all %>%
+  pivot_longer(cols = Area:Lat,
+               names_to = "Variable",
+               values_to = "P_value")
+figure.table <- cor.table.long %>%
+  left_join(p.table.long, by = c("BMPType", "Variable"))
+
+figure.table$sig.cor <- ifelse(figure.table$P_value < 0.1, figure.table$Correlation, NA)
+figure.table$stars <- ifelse(figure.table$P_value < 0.001, "***", 
+                             ifelse(figure.table$P_value < 0.05, "**", 
+                                    ifelse(figure.table$P_value < 0.1, "*", NA)))
+figure.table$label <- paste(round(figure.table$sig.cor, 2),"\n", figure.table$stars)
+
+figure.table$label[figure.table$label == "NA \n NA"] <- ""
+
+
+head(figure.table)
+
+#figure.table$Species <- factor(figure.table$Species, levels = rev(c("TN", "NH4", "NO3", "TP", "PO4")))
+figure.table$Variable <- factor(figure.table$Variable, levels = c("Area", "Depth", "Age", "Vol", "Load", "Conc", "AI", "Lat") )
+
+cor.plot <- ggplot(figure.table, aes(x = Variable, y = BMPType, fill = sig.cor)) +
+  geom_tile() +
+  geom_text(aes(label = label), size = 2.2) +
+  scale_fill_distiller(palette = "RdBu", direction = 1, na.value = "#54545400") +
+  #facet_wrap(.~BMP_names) +
+  theme_bw(base_size = 10) +
+  theme(legend.position = "bottom",  
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5), 
+        legend.title = element_blank()) 
+cor.plot
+
+tiff(filename = "figures/residual_correlations_all_species.tif", height = 3, width = 4, units = "in", res = 800, compression = "lzw")
+cor.plot
+dev.off()
+
+#### all BMP types and all species together
+
+
+
+
+df.long <- df %>%
+  pivot_longer(cols = Area:Lat, names_to = "Variable", values_to = "value")
+head(df)
+head(df.long)
+
+
+
+
+cor.fun3 <- function(input){
+  output <- data.frame(matrix(ncol = 8, nrow = 1))
+    for (i in 1:8) {
+      if (length(unique(c(input[,i+3], NA))) > 2) {
+        output[,i] <- cor(input[, i+3], input[,3], use = "na.or.complete")
+      }
+    }
+  names(output) <- Drivers
+  round(output,3)
+}
+
+cor.fun3(df)
+cor.all <- cor.fun3(df)
+r2.all <- cor.all^2
+
+### P value function
+sig.fun3 <- function(input){
+  output <- data.frame(matrix(ncol = 8, nrow = 1))
+    for (i in 1:8) {
+      if (length(unique(c(input[,i+3], NA))) > 2) {
+        m <- lm(input$residual~input[,i+3])
+        output[,i] <- coef(summary(m))[2,4]
+      }
+    }
+  names(output) <- Drivers
+  round(output,9)
+}
+
+sig.fun3(df)
+sig.table.all <- sig.fun2(df)
+sig <- c(TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE)
+names(sig) <- c("Age", "AI", "Area", "Conc", "Depth", "Lat", "Load", "Vol")
+
+df.long %>%
+  ggplot(aes(x = (value) , y = residuals))+
+  geom_point() +
+  theme_bw(base_size=10) +
+  #geom_smooth(method = "lm", se = FALSE) +
+  geom_smooth(data = df.long[df.long$Variable %in% names(sig)[sig == TRUE],], method = "lm", se = TRUE) +
+  facet_wrap(.~Variable, scales = "free_x") +
+  geom_hline(yintercept = 0)+
+  geom_vline(xintercept = 0)+
+  #geom_abline(slope = 1, intercept = 0) +
+  theme(legend.position = 'none',
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+
+
+
+
 
