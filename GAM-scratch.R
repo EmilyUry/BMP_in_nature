@@ -32,23 +32,25 @@ data <- select[!is.na(select$flow_atten_percent),]
 
 ######## exclude very low retention percent (5% of data)
 data <- data[data$retention_percent > -230,]
-
+#data <- data[data$latitude >0,]
+data$latitude <- abs(data$latitude)
 
 ## GAM
 
 
 library(mgcv)
+library(tidymv)
 library(lme4)
 ## mgcv::gamm() same as nlme::lme() plus mgcv::gam()
 
 ### full model
 model_full <- gam((retention_percent) ~ s(log(Conc_in)) + 
-                    s(log(Vol_in)) + 
+                    #s(log(Vol_in)) + 
                     s(log(Load_in)) +    ##exclude cause it is not sig? 
                     s(AI) + 
                     s(latitude) + 
-                    s(BMPAge) +
-                    s(Area_ha) +
+                    #s(BMPAge) +
+                    #s(Area_ha) +
                     s(BMPType, bs = "re") +             #### random effect
                     s(Species, bs = "re"),              #### random effect
                   data = data, method = "REML", family = gaussian() )
@@ -62,18 +64,99 @@ summary(model_full)$r.sq
 
 model_full_plus_FA <- gam((retention_percent) ~ s(flow_atten_percent) +  
                     s(log(Conc_in)) + 
-                    s(log(Vol_in)) + 
+                    #s(log(Vol_in)) + 
                     s(log(Load_in)) + 
                     s(AI) + 
                     s(latitude) + 
-                    s(BMPAge) +
-                    s(Area_ha) +
+                    #s(BMPAge) +
+                    #s(Area_ha) +
                     s(BMPType, bs = "re") +             #### random effect
                     s(Species, bs = "re"),              #### random effect
                   data = data, method = "REML", family = gaussian() )
 summary(model_full_plus_FA)
 AIC(model_full_plus_FA)
 
+plot(model_full_plus_FA)
+
+
+par(mfrow = c(2,3))
+
+plot(model_full_plus_FA, residuals = FALSE, rug = FALSE, se = TRUE,
+     shade = TRUE, shade.col = "#00000040", col = "#000000", lwd = 2)
+par(mfrow = c(2,3))
+par(mfrow = c(2,3))
+
+plot(model_full_plus_FA, residuals = FALSE, rug = FALSE, se = TRUE,
+     shade = TRUE, shade.col = "#FF000040", col = "red", lwd = 2)
+par(mfrow = c(2,3))
+par(mfrow = c(2,3))
+
+plot(model_full_plus_FA, residuals = FALSE, rug = FALSE, se = TRUE,
+     shade = TRUE, shade.col = "#FF00FF40", col = "#FF00FF", lwd = 2)
+par(mfrow = c(2,3))
+par(mfrow = c(2,3))
+
+plot(model_full_plus_FA, residuals = FALSE, rug = FALSE, se = TRUE,
+     shade = TRUE, shade.col = "#00FF5040", col = "#00FF90", lwd = 2)
+par(mfrow = c(2,3))
+par(mfrow = c(2,3))
+
+plot(model_full_plus_FA, residuals = FALSE, rug = FALSE, se = TRUE,
+     shade = TRUE, shade.col = "#0000FF40", col = "#0000FF", lwd = 2)
+par(mfrow = c(2,3))
+par(mfrow = c(2,3))
+
+plot(model_full_plus_FA, residuals = FALSE, rug = FALSE, se = TRUE,
+     shade = TRUE, shade.col = "#e8ab0740", col = "#e8ab07", lwd = 2)
+par(mfrow = c(2,3))
+par(mfrow = c(2,3))
+
+# 
+# plot_smooths(model_full_plus_FA, series = flow_atten_percent) +
+#   theme(legend.position = "top")
+
+
+hist(data$latitude)
+
+summary(model_full_plus_FA)$r.sq
+
+plot(model_full_plus_FA)
+
+
+#### BMPsize and BMPage removed (degrees of freedom issue)
+
+
+P.data <- data[which(data$Species == "TP" | data$Species == "PO4"),]
+N.data <- data[which(data$Species != "TP" & data$Species != "PO4"),]
+
+#### PHOSPHORUS
+input <- P.data
+model_full <- gam((retention_percent) ~ s(log(Conc_in)) +  s(log(Vol_in)) + s(log(Load_in)) + 
+                    s(AI) + s(latitude) + #s(BMPAge) + 
+                    s(Species, bs = "re"),
+                  data = input, method = "REML", family = gaussian() )
+AIC(model_full)
+summary(model_full)$r.sq
+model_full_plus_FA <- gam((retention_percent) ~ s(flow_atten_percent) + s(log(Conc_in)) +  s(log(Vol_in)) + s(log(Load_in)) + 
+                            s(AI) + s(latitude) + #s(BMPAge) + 
+                            s(Species, bs = "re"),
+                          data = input, method = "REML", family = gaussian() )
+AIC(model_full_plus_FA)
+summary(model_full_plus_FA)$r.sq
+
+###### NITROGEN
+input <- N.data
+model_full <- gam((retention_percent) ~ s(log(Conc_in)) +  s(log(Vol_in)) + s(log(Load_in)) + 
+                    s(AI) + s(latitude) + #s(BMPAge) + 
+                    s(Species, bs = "re"),
+                  data = input, method = "REML", family = gaussian() )
+AIC(model_full)
+summary(model_full)$r.sq
+model_full_plus_FA <- gam((retention_percent) ~ s(flow_atten_percent) +  s(log(Conc_in)) +  s(log(Vol_in)) + s(log(Load_in)) + 
+                            s(AI) + s(latitude) + #s(BMPAge) + 
+                            s(Species, bs = "re"),
+                          data = input, method = "REML", family = gaussian() )
+AIC(model_full_plus_FA)
 summary(model_full_plus_FA)$r.sq
 
 
@@ -82,8 +165,8 @@ summary(model_full_plus_FA)$r.sq
 
 
 
-#### EACH BMP Type separate -- Solute group by N/P 
-#### BMPsize and BMPage removed (degrees of freedom issue)
+
+
 
 
 
