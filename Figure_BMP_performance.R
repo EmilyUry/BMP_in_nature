@@ -9,7 +9,6 @@ setwd("C:/Users/uryem/OneDrive - University of Waterloo/BMP_project")
 
 library(tidyverse)
 library(ggplot2)
-library(viridis)
 options(scipen=999)
 
 ## order = BR GS DB RP WB WC
@@ -32,6 +31,18 @@ select$Species <- factor(select$Species , levels=c("TN","NH4", "NO3","TKN", "TP"
 
 
 data <- select[which(select$Species != "TKN"),]
+
+length(unique(data$BMPID))
+test <- data
+test$BMP_event <- paste(test$BMPID, test$EventID, sep = "")
+length(unique(test$BMP_event))
+
+
+# summary <- data %>%
+#   group_by(Species, BMPType) %>%
+#   summarise(count = n(), 
+#             median_retention = median(retention, na.rm = TRUE), 
+#             median_retention_percent = median(retention_percent, na.rm = TRUE))
 
 summary <- data %>%
   group_by(Species, BMPType) %>%
@@ -56,7 +67,7 @@ figure <- ggplot(data, aes(x = BMPType, y = retention_percent, fill = factor(BMP
   ylab("Percent retention") +
   xlab(" ") +
   geom_text(data = summary, aes(label = count), 
-            position = position_dodge(width = 1.0), size = 2.5, color = "gray50")
+            position = position_dodge(width = 1.0), size = 2.5, color = "gray30")
 
 figure
 
@@ -126,9 +137,11 @@ summary <- data %>%
   summarise(count = n(), 
             retention = median(retention/Area_ha/10000)) 
 
-
-count <- c(0, summary$count[1:5], 0, summary$count[6], 0, summary$count[7:9], 0, summary$count[10:14],
-               0, summary$count[15:19], 0, summary$count[20:24])
+count <- c(0, 29, 21, 81, 45, 22, 0, 17, 0, 50, 48, 0,
+           0, 17, 30, 65, 45, 0, 0, 107, 123, 134, 62, 22, 
+           0, 77, 7, 91, 15, 0)
+# count <- c(0, summary$count[1:5], 0, summary$count[6], 0, summary$count[7:9], 0, summary$count[10:14],
+#                0, summary$count[15:19], 0, summary$count[20:24])
 retention <- rep(1,30)
 summary <- data.frame(Species, BMPType, count, retention)
 
@@ -164,6 +177,66 @@ figure
 
 dev.off()
 
+
+
+
+
+
+
+####### Figure -- source/sink behavior
+
+
+
+summary <- data %>%
+  group_by(Species, BMPType) %>%
+  summarise(count = n(), 
+            retention_mass = median(retention)) %>%
+  mutate(retention_mass = -200)
+
+
+data$source.sink <- ifelse(data$retention >= 0, "sink", "source")
+summary <- data %>%
+  group_by(Species, BMPType, source.sink) %>%
+  summarize(Retention = median(retention),
+            count = n()) 
+summary$position = c(rep(c(3, -1), 6), rep(c(0.8, -0.5), 6), rep(c(1.5, -1.5), 6),
+                     rep(c(0.4,-0.3), 6), rep(c(0.15, -0.1), 6))
+
+label <- summary
+label$Retention <- label$position
+
+figure <- ggplot(summary, aes(x = BMPType, y = Retention/1000, fill = factor(BMPType))) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = pal,  name = " ", labels = BMP_names) +
+    theme_bw(base_size = 10) +
+  theme(legend.position = c(0.85,0.25), legend.key.size = unit(0.5, 'cm'),
+        legend.text=element_text(size=10),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+  facet_wrap(.~Species, nrow = 2, scales = "free") +
+  ylab("Retention (kg/event)") +
+  xlab(" ") +
+  geom_hline(yintercept = 0) +
+  geom_text(data = label, aes(BMPType, Retention, label = count), 
+            position = position_dodge(width = 1.0), 
+            size = 2.5, color = "gray30")
+
+tiff(filename = "figures/Retention_BMPType_mass_source_sink.tif", height=4, width=6, units= "in", res=800, compression= "lzw")
+
+figure
+
+dev.off()
+
+
+
+
+
+
+
+
+
+
+
+### metrics
 
 
 summary <- data %>%
