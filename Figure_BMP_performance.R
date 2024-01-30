@@ -24,8 +24,8 @@ levels(select$BMPType)
 
 select$BMPType <- factor(select$BMPType , levels=c('BR','BS/BI','DB', "RP",  "WB", "WC"))
 levels(select$BMPType) <- c('BR','GS','DB', "RP",  "WB", "WC")
-BMP_names <- c("Bioretention","Grass strip/swale", "Detention basin (dry)", "Retention pond", "Wetland basin", "Wetland channel")
-levels(select$BMPType_name) <- BMP_names
+#BMP_names <- c("Bioretention","Grass strip/swale", "Detention basin (dry)", "Retention pond", "Wetland basin", "Wetland channel")
+#levels(select$BMPType_name) <- BMP_names
 select$Species <- factor(select$Species , levels=c("TN","NH4", "NO3","TKN", "TP", "PO4"))
 
 
@@ -38,11 +38,41 @@ test$BMP_event <- paste(test$BMPID, test$EventID, sep = "")
 length(unique(test$BMP_event))
 
 
-# summary <- data %>%
-#   group_by(Species, BMPType) %>%
-#   summarise(count = n(), 
-#             median_retention = median(retention, na.rm = TRUE), 
-#             median_retention_percent = median(retention_percent, na.rm = TRUE))
+############## Table 1 #################################################
+
+summaryn <- data %>%
+  group_by(BMPType, BMPID) %>%
+  summarise(count = n())
+
+summary0 <- data %>%
+  summarise(count = n(),
+            median_retention = median(retention, na.rm = TRUE),
+            IQ25 = quantile(retention, 0.25, na.rm = TRUE),
+            IQ75 = quantile(retention, 0.75, na.rm = TRUE),
+            median_retention_percent = median(retention_percent, na.rm = TRUE), 
+            IQp25 = quantile(retention_percent, 0.25, na.rm = TRUE),
+            IQp75 = quantile(retention_percent, 0.75, na.rm = TRUE))
+
+summary1 <- data %>%
+  group_by(Species) %>%
+  summarise(count = n(),
+            median_retention = median(retention, na.rm = TRUE),
+            IQ25 = quantile(retention, 0.25, na.rm = TRUE),
+            IQ75 = quantile(retention, 0.75, na.rm = TRUE),
+            median_retention_percent = median(retention_percent, na.rm = TRUE), 
+            IQp25 = quantile(retention_percent, 0.25, na.rm = TRUE),
+            IQp75 = quantile(retention_percent, 0.75, na.rm = TRUE))
+
+summary2 <- data %>%
+  group_by(BMPType) %>%
+  summarise(count = n(),
+            median_retention = median(retention, na.rm = TRUE),
+            IQ25 = quantile(retention, 0.25, na.rm = TRUE),
+            IQ75 = quantile(retention, 0.75, na.rm = TRUE),
+            median_retention_percent = median(retention_percent, na.rm = TRUE), 
+            IQp25 = quantile(retention_percent, 0.25, na.rm = TRUE),
+            IQp75 = quantile(retention_percent, 0.75, na.rm = TRUE))
+
 
 summary <- data %>%
   group_by(Species, BMPType) %>%
@@ -94,15 +124,16 @@ figure <- ggplot(data, aes(x = BMPType, y = retention/1000, fill = factor(BMPTyp
   #geom_jitter(color = "black", size = 0.4, alpha = 0.8, width = 0.2)+
   geom_boxplot(coef=1.5, outlier.shape = NA) +
   scale_fill_manual(values = pal,  name = " ", labels = BMP_names) +
-  ylim(-1,3) + # chose not to use coorcartesian here, because in this case the outliers are ridiculous
+  coord_cartesian(ylim = c(-1,3)) +
+  #ylim(-1,3) + # chose not to use coorcartesian here, because in this case the outliers are ridiculous
   theme_bw(base_size = 10) +
-  theme(legend.position = c(0.83,0.25), legend.key.size = unit(0.5, 'cm'),
-        legend.text=element_text(size=11),
+  theme(legend.position = c(0.84,0.25), legend.key.size = unit(0.5, 'cm'),
+        legend.text=element_text(size=10),
         panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
   facet_wrap(.~Species, nrow = 2, scales = "free") +
   theme(axis.text=element_text(size=8)) +
   geom_hline(yintercept = 0, size = .1) +
-  ylab("retention (kg/event)") +
+  ylab("Retention (kg/event)") +
   xlab(" ") +
   geom_text(data = summary, aes(y = -0.8, label = count), 
             position = position_dodge(width = 1.0), size = 2.5, color = "gray40")
@@ -152,7 +183,8 @@ figure <- ggplot(data, aes(x = BMPType, y = retention/Area_ha/10000, fill = fact
   #geom_jitter(color = "black", size = 0.4, alpha = 0.8, width = 0.2)+
   geom_boxplot(coef=1.5, outlier.shape = NA) +
   scale_fill_manual(values = pal5,  name = " ", labels = BMP_names) +
-  ylim(-0.5,2) + # chose not to use coorcartesian here, because in this case the outliers are ridiculous
+  coord_cartesian(ylim = c(0,3)) +
+  #ylim(-0.5,1.1) + # chose not to use coorcartesian here, because in this case the outliers are ridiculous
   theme_bw(base_size = 10) +
   theme(legend.position = c(0.83,0.25), legend.key.size = unit(0.5, 'cm'),
         legend.text=element_text(size=11),
@@ -160,7 +192,7 @@ figure <- ggplot(data, aes(x = BMPType, y = retention/Area_ha/10000, fill = fact
   facet_wrap(.~Species, nrow = 2, scales = "free") +
   theme(axis.text=element_text(size=8)) +
   geom_hline(yintercept = 0, size = .1) +
-  ylab("retention (g/m2)") +
+  ylab("Retention (g/m2)") +
   xlab(" ") +
   geom_text(data = summary, aes(y = -0.4, label = count), 
             position = position_dodge(width = 1.0), size = 2.5, color = "gray40") +
@@ -206,9 +238,10 @@ label <- summary
 label$Retention <- label$position
 
 figure <- ggplot(summary, aes(x = BMPType, y = Retention/1000, fill = factor(BMPType))) +
-  geom_bar(stat = "identity") +
+  geom_bar(stat = "identity", color = "black") +
   scale_fill_manual(values = pal,  name = " ", labels = BMP_names) +
     theme_bw(base_size = 10) +
+  coord_cartesian() +
   theme(legend.position = c(0.85,0.25), legend.key.size = unit(0.5, 'cm'),
         legend.text=element_text(size=10),
         panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
@@ -219,6 +252,8 @@ figure <- ggplot(summary, aes(x = BMPType, y = Retention/1000, fill = factor(BMP
   geom_text(data = label, aes(BMPType, Retention, label = count), 
             position = position_dodge(width = 1.0), 
             size = 2.5, color = "gray30")
+
+figure
 
 tiff(filename = "figures/Retention_BMPType_mass_source_sink.tif", height=4, width=6, units= "in", res=800, compression= "lzw")
 
@@ -238,11 +273,18 @@ dev.off()
 
 ### metrics
 
+data.mod <- data
+#data.mod$retention_percent <- ifelse(data.mod$retention_percent < -250, -250, data.mod$retention_percent)
 
 summary <- data %>%
   group_by(Species) %>%
   summarise(mean = mean(retention_percent, na.rm = TRUE), 
+            sd  = sd(retention_percent, na.rm = TRUE),
             median_percent = median(retention_percent, na.rm = TRUE), 
+            min_percent = min(retention_percent, na.rm = TRUE),
+            max_percent = max(retention_percent, na.rm = TRUE),
+            Q75 = quantile(retention_percent, 0.75, na.rm = TRUE),
+            Q25 = quantile(retention_percent, 0.25, na.rm = TRUE),
             median_mass = median(retention, na.rm = TRUE),
             count = n())
 summary
@@ -262,7 +304,23 @@ summary
 summary <- data %>%
   group_by(BMPType, Species) %>%
   summarise(count = n())
-summary
+print(summary, n = 30)
+
+
+summary <- data %>%
+  group_by(BMPType, Species) %>%
+  summarise(mass = round(median(retention, na.rm = TRUE), 1),
+            Q25 = round(quantile(retention, 0.25, na.rm = TRUE), 0),
+            Q75 = round(quantile(retention, 0.75, na.rm = TRUE), 0))
+print(summary, n = 30)
+
+
+summary <- data %>%
+  group_by(BMPType, Species) %>%
+  summarise(percent = round(median(retention_percent, na.rm = TRUE), 0),
+            Q25 = round(quantile(retention_percent, 0.25, na.rm = TRUE), 0),
+            Q75 = round(quantile(retention_percent, 0.75, na.rm = TRUE), 0))
+print(summary, n = 30)
 
 
 library(rstatix)
