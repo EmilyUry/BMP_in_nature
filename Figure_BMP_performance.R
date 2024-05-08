@@ -9,10 +9,12 @@ setwd("C:/Users/uryem/OneDrive - University of Waterloo/BMP_project")
 
 library(tidyverse)
 library(ggplot2)
+library(gtable)
+library(ggpubr)
 options(scipen=999)
 
 ## order = BR GS DB RP WB WC
-pal <- c("#d6e2c7", "#94ac8b", "#fff3c8",  "#d7c5e6", "#c1c9e5", "#8f94c8" ) 
+##pal <- c("#d6e2c7", "#94ac8b", "#fff3c8",  "#d7c5e6", "#c1c9e5", "#8f94c8" ) 
 
 
 select <- read.csv("BMP_Clean_filtered.csv", stringsAsFactors = TRUE)
@@ -22,10 +24,16 @@ levels(select$BMPType)
 
 ### reorder factors
 
-select$BMPType <- factor(select$BMPType , levels=c('BR','BS/BI','DB', "RP",  "WB", "WC"))
-levels(select$BMPType) <- c('BR','GS','DB', "RP",  "WB", "WC")
-#BMP_names <- c("Bioretention","Grass strip/swale", "Detention basin (dry)", "Retention pond", "Wetland basin", "Wetland channel")
-#levels(select$BMPType_name) <- BMP_names
+#select$BMPType <- factor(select$BMPType , levels=c('BR','BS/BI','DB', "RP",  "WB", "WC"))
+#levels(select$BMPType) <- c('BR','GS','DB', "RP",  "WB", "WC")
+#BMP_names <- c("Bioretention (BR)","Grass strip/swale (GS)", "Detention basin (DB)", "Retention pond (RP)", "Wetland basin (WB)", "Wetland channel (WC)")
+
+
+## new order = DB, RP, GS, WB, WC BR
+pal <- c("#fff3c8",  "#d7c5e6",  "#94ac8b", "#c1c9e5", "#8f94c8", "#d6e2c7" )
+select$BMPType <- factor(select$BMPType, levels = c("DB", "RP", "BS/BI", "WB", "WC", "BR"))
+levels(select$BMPType) <- c('DB','RP','GS', "WB",  "WC", "BR")
+BMP_names <- c("Detention basin (DB)",  "Retention pond (RP)", "Grass strip/swale (GS)",  "Wetland basin (WB)", "Wetland channel (WC)", "Bioretention (BR)") 
 select$Species <- factor(select$Species , levels=c("TN","NH4", "NO3","TKN", "TP", "PO4"))
 
 
@@ -81,9 +89,14 @@ summary <- data %>%
   mutate(retention_percent = -200)
 
 
+y_labels <- c(TN = "(A) Total Nitrogen", 
+              NH4 = "(B) NH4",
+              NO3 = "(C) NO3",
+              TP= "(D) Total Phosphorus",
+              PO4 = "(E) PO4")
+
 ### percent retention
 figure <- ggplot(data, aes(x = BMPType, y = retention_percent, fill = factor(BMPType))) +
-  #geom_jitter(color = "black", size = 0.4, alpha = 0.8, width = 0.2)+
   geom_boxplot(coef=1.5, outlier.shape = NA) +
   scale_fill_manual(values = pal,  name = " ", labels = BMP_names) +
   coord_cartesian(ylim = c(-210,110)) +
@@ -91,10 +104,11 @@ figure <- ggplot(data, aes(x = BMPType, y = retention_percent, fill = factor(BMP
   theme(legend.position = c(0.83,0.25), legend.key.size = unit(0.5, 'cm'),
         legend.text=element_text(size=11),
         panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-  facet_wrap(.~Species, nrow = 2, scales = "free") +
-  theme(axis.text=element_text(size=8)) +
+  facet_wrap(.~Species, nrow = 2, scales = "free", labeller = labeller(Species = y_labels)) +
+  theme(axis.text=element_text(size=8), 
+        strip.text = element_text(hjust = 0, face = "bold")) +
   geom_hline(yintercept = 0, size = .1) +
-  ylab("Percent retention") +
+  ylab("Solute retention (% per event)") +
   xlab(" ") +
   geom_text(data = summary, aes(label = count), 
             position = position_dodge(width = 1.0), size = 2.5, color = "gray30")
@@ -103,8 +117,7 @@ figure
 
 
 
-
-tiff(filename = "figures/Retention_BMPType.tif", height=4, width=6, units= "in", res=800, compression= "lzw")
+tiff(filename = "figures/Retention_BMPType_V2.tif", height=4, width=6, units= "in", res=800, compression= "lzw")
 
 figure
 
@@ -130,10 +143,11 @@ figure <- ggplot(data, aes(x = BMPType, y = retention/1000, fill = factor(BMPTyp
   theme(legend.position = c(0.84,0.25), legend.key.size = unit(0.5, 'cm'),
         legend.text=element_text(size=10),
         panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-  facet_wrap(.~Species, nrow = 2, scales = "free") +
-  theme(axis.text=element_text(size=8)) +
+  facet_wrap(.~Species, nrow = 2, scales = "free", labeller = labeller(Species = y_labels)) +
+  theme(axis.text=element_text(size=8),
+        strip.text = element_text(hjust = 0, face = "bold")) +
   geom_hline(yintercept = 0, size = .1) +
-  ylab("Retention (kg/event)") +
+  ylab("Solute retention (kg per event)") +
   xlab(" ") +
   geom_text(data = summary, aes(y = -0.8, label = count), 
             position = position_dodge(width = 1.0), size = 2.5, color = "gray40")
@@ -143,7 +157,7 @@ figure
 
 
 
-tiff(filename = "figures/Retention_BMPType_supplement.tif", height=4, width=6, units= "in", res=800, compression= "lzw")
+tiff(filename = "figures/Retention_BMPType_supplement_V2.tif", height=4, width=6, units= "in", res=800, compression= "lzw")
 
 figure
 
@@ -177,22 +191,23 @@ retention <- rep(1,30)
 summary <- data.frame(Species, BMPType, count, retention)
 
 
-pal5 <- c("#d6e2c7", "#fff3c8", "#94ac8b", "#d7c5e6", "#c1c9e5", "#8f94c8" ) 
+pal5 <- c( "#d6e2c7" , "#fff3c8",  "#94ac8b", "#d7c5e6",  "#c1c9e5", "#8f94c8")
+
 
 figure <- ggplot(data, aes(x = BMPType, y = retention/Area_ha/10000, fill = factor(BMPType))) +
-  #geom_jitter(color = "black", size = 0.4, alpha = 0.8, width = 0.2)+
   geom_boxplot(coef=1.5, outlier.shape = NA) +
   scale_fill_manual(values = pal5,  name = " ", labels = BMP_names) +
-  coord_cartesian(ylim = c(0,3)) +
-  #ylim(-0.5,1.1) + # chose not to use coorcartesian here, because in this case the outliers are ridiculous
+  #coord_cartesian(ylim = c(-0.5,1.2)) +
+  ylim(-0.5,1.1) + # chose not to use coorcartesian here, because in this case the outliers are ridiculous
   theme_bw(base_size = 10) +
   theme(legend.position = c(0.83,0.25), legend.key.size = unit(0.5, 'cm'),
         legend.text=element_text(size=11),
         panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-  facet_wrap(.~Species, nrow = 2, scales = "free") +
-  theme(axis.text=element_text(size=8)) +
+  facet_wrap(.~Species, nrow = 2, scales = "free", labeller = labeller(Species = y_labels)) +
+  theme(axis.text=element_text(size=8),
+        strip.text = element_text(hjust = 0, face = "bold")) +
   geom_hline(yintercept = 0, size = .1) +
-  ylab("Retention (g/m2)") +
+  ylab("Solute retention (g per m2)") +
   xlab(" ") +
   geom_text(data = summary, aes(y = -0.4, label = count), 
             position = position_dodge(width = 1.0), size = 2.5, color = "gray40") +
@@ -203,7 +218,7 @@ figure
 
 
 
-tiff(filename = "figures/Retention_BMPType_supplement2.tif", height=4, width=6, units= "in", res=800, compression= "lzw")
+tiff(filename = "figures/Retention_BMPType_supplement2_V2.tif", height=4, width=6, units= "in", res=800, compression= "lzw")
 
 figure
 
@@ -244,9 +259,10 @@ figure <- ggplot(summary, aes(x = BMPType, y = Retention/1000, fill = factor(BMP
   coord_cartesian() +
   theme(legend.position = c(0.85,0.25), legend.key.size = unit(0.5, 'cm'),
         legend.text=element_text(size=10),
-        panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-  facet_wrap(.~Species, nrow = 2, scales = "free") +
-  ylab("Retention (kg/event)") +
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        strip.text = element_text(hjust = 0, face = "bold")) +
+  facet_wrap(.~Species, nrow = 2, scales = "free", labeller = labeller(Species = y_labels)) +
+  ylab("Solute retention (kg per event)") +
   xlab(" ") +
   geom_hline(yintercept = 0) +
   geom_text(data = label, aes(BMPType, Retention, label = count), 
